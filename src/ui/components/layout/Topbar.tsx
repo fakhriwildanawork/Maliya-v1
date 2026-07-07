@@ -33,7 +33,7 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
   };
 
   return (
-    <header className="relative flex items-center justify-between py-4 px-4 md:px-8 bg-gray-50 border-b border-border-light flex-shrink-0 min-h-[4.5rem]">
+    <header className="relative flex items-center justify-between pt-[calc(1rem+env(safe-area-inset-top))] pb-4 px-4 md:px-8 bg-gray-50 border-b border-border-light flex-shrink-0 min-h-[calc(4.5rem+env(safe-area-inset-top))]">
       {/* Title */}
       <div className="flex items-center gap-3">
         <button

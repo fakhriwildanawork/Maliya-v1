@@ -85,7 +85,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 bg-bg-sidebar flex flex-col py-6 border-r border-border-light w-64 lg:w-60 flex-shrink-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
+        "fixed inset-y-0 left-0 bg-bg-sidebar flex flex-col pt-[calc(1.5rem+env(safe-area-inset-top))] pb-6 border-r border-border-light w-64 lg:w-60 flex-shrink-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         
