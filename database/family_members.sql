@@ -48,11 +48,5 @@ CREATE TRIGGER family_members_update_audit
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Seed Family Members
-INSERT INTO family_members (name, relationship, role, email, phone, avatar_url, joined_date, status)
-VALUES
-('Oripio Studio', 'Parent', 'Owner', 'oripiostudio@gmail.com', '081234567890', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', '2026-01-01', 'Active'),
-('Siti Rahma', 'Spouse', 'Admin', 'sitirahma@family.com', '081298765432', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka', '2026-01-05', 'Active'),
-('Rian Pratama', 'Child', 'Member', 'rianpratama@family.com', '081344556677', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Buddy', '2026-02-14', 'Active'),
-('Aulia Zahra', 'Child', 'Viewer', 'auliazahra@family.com', '081399887766', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna', '2026-03-20', 'Pending')
-ON CONFLICT (email) DO NOTHING;
+-- (Data seed dihapus agar database murni dari input pengguna)
 
