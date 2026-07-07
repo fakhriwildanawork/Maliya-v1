@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#16a34a" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet" />
+    <title>Maliya</title>
+  </head>
+  <body>
+    <!-- Responsive White Splash Screen with Logo -->
+    <div id="splash-screen" style="position: fixed; inset: 0; background-color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; transition: opacity 0.5s ease; opacity: 1; pointer-events: none; select: none;">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        <img src="https://lh3.googleusercontent.com/d/1duxFTUJGOUk0Kt7X81Ei1FmYUH3qZMXA" alt="Maliya Logo" style="width: 5rem; height: 5rem; object-fit: cover; border-radius: 1.5rem; margin-bottom: 1rem;" />
+        <h1 style="font-family: 'Nunito', 'Inter', system-ui, -apple-system, sans-serif; font-size: 1.75rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.025em;">Maliya</h1>
+        <p style="font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0;">Finance Manager for Family</p>
+      </div>
+    </div>
+    <script>
+      window.splashStartTime = Date.now();
+      window.removeSplashScreen = () => {
+        const elapsed = Date.now() - window.splashStartTime;
+        const remaining = Math.max(0, 2000 - elapsed);
+        setTimeout(() => {
+          const splash = document.getElementById('splash-screen');
+          if (splash) {
+            splash.style.opacity = '0';
+            setTimeout(() => splash.remove(), 500);
+          }
+        }, remaining);
+      };
+      // Fallback timeout to ensure splash is removed even if script fails
+      setTimeout(() => {
+        window.removeSplashScreen();
+      }, 6000);
+    </script>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
