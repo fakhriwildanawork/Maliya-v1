@@ -1,610 +1,386 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
-import { Wallet, CreditCard, Budget, Activity, Goal, RevenuePlan, Debt, Investment, InvestmentHistoryLog, Asset, AssetHistoryLog, FamilyMember } from '../types/finance';
-import { useInvestments } from '../hooks/useInvestments';
-import { useAssets } from '../hooks/useAssets';
-import { useFamilyMembers } from '../hooks/useFamilyMembers';
-import { useAccounts } from '../hooks/useAccounts';
-import { useBudgets } from '../hooks/useBudgets';
-import { useDebts } from '../hooks/useDebts';
-import { useGoals } from '../hooks/useGoals';
-import { useTransactions } from '../hooks/useTransactions';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Wallet, CreditCard, Budget, Activity, Goal, RevenuePlan, Debt, Investment, Asset, FamilyMember, Category } from '../types/finance';
+import { AccountService } from '../services/accountService';
+import { transactionService } from '../services/transactionService';
+import { BudgetService } from '../services/budgetService';
+import { GoalService } from '../services/goalService';
+import { DebtService } from '../services/debtService';
+import { InvestmentService } from '../services/investmentService';
+import { AssetService } from '../services/assetService';
+import { FamilyMemberService } from '../services/familyMemberService';
+import { CategoryService } from '../services/categoryService';
 
 interface FinanceContextType {
+  // State
   wallets: Wallet[];
   cards: CreditCard[];
   budgets: Budget[];
   revenuePlans: RevenuePlan[];
   goals: Goal[];
   activities: Activity[];
+  debts: Debt[];
+  investments: Investment[];
+  assets: Asset[];
+  familyMembers: FamilyMember[];
+  categories: Category[];
+  
+  // Loading states
+  loading: boolean;
   totalActivities: number;
   loadingActivities: boolean;
-  loadingMoreActivities: boolean;
-  hasMoreActivities: boolean;
-  fetchActivities: (page?: number, reset?: boolean, filters?: any) => Promise<void>;
+  
+  // Fetch operations
   fetchAccounts: () => Promise<void>;
+  fetchActivities: (page?: number, reset?: boolean, filters?: any) => Promise<void>;
   fetchBudgets: () => Promise<void>;
   fetchGoals: () => Promise<void>;
   fetchDebts: () => Promise<void>;
   fetchInvestments: () => Promise<void>;
   fetchAssets: () => Promise<void>;
   fetchFamilyMembers: () => Promise<void>;
-  debts: Debt[];
-  investments: Investment[];
-  assets: Asset[];
-  familyMembers: FamilyMember[];
-  loading: boolean;
-  assetsLoading?: boolean;
-  addActivity: (activity: Partial<Activity>) => void;
-  updateActivity: (id: string, activity: Partial<Activity>) => void;
-  deleteActivity: (activityId: string) => void;
-  updateBudget: (budget: Budget) => void;
-  deleteBudget: (budgetId: string) => void;
-  updateWallet: (wallet: Wallet) => void;
-  deleteWallet: (walletId: string) => void;
-  updateCard: (card: CreditCard) => void;
-  deleteCard: (cardId: string) => void;
-  addWallet: (wallet: Partial<Wallet>) => void;
-  addCard: (card: Partial<CreditCard>) => void;
-  addBudget: (budget: Partial<Budget>) => void;
-  addRevenuePlan: (plan: Partial<RevenuePlan>) => void;
-  updateRevenuePlan: (plan: RevenuePlan) => void;
-  deleteRevenuePlan: (planId: string) => void;
-  addGoal: (goal: Partial<Goal>) => void;
-  updateGoal: (goal: Goal) => void;
-  deleteGoal: (goalId: string) => void;
-  addDebt: (debt: Partial<Debt>) => void;
-  updateDebt: (debt: Debt) => void;
-  deleteDebt: (debtId: string) => void;
-  addInvestment: (investment: Partial<Investment>) => void;
-  updateInvestment: (investment: Investment) => void;
-  deleteInvestment: (investmentId: string) => void;
-  addInvestmentValueLog: (investmentId: string, currentPrice: number, note?: string) => void;
-  addAsset: (asset: Partial<Asset>) => void;
-  updateAsset: (asset: Asset) => void;
-  deleteAsset: (assetId: string) => void;
-  addAssetValueLog: (assetId: string, newValue: number, note?: string) => void;
-  addFamilyMember: (member: Partial<FamilyMember>) => void;
-  updateFamilyMember: (member: FamilyMember) => void;
-  deleteFamilyMember: (memberId: string) => void;
+  fetchCategories: () => Promise<void>;
+
+  // CRUD Operations
+  addActivity: (activity: Partial<Activity>) => Promise<void>;
+  updateActivity: (id: string, activity: Partial<Activity>) => Promise<void>;
+  deleteActivity: (id: string) => Promise<void>;
+  
+  addWallet: (wallet: Partial<Wallet>) => Promise<void>;
+  updateWallet: (wallet: Wallet) => Promise<void>;
+  deleteWallet: (id: string) => Promise<void>;
+  
+  addCard: (card: Partial<CreditCard>) => Promise<void>;
+  updateCard: (card: CreditCard) => Promise<void>;
+  deleteCard: (id: string) => Promise<void>;
+  
+  addBudget: (budget: Partial<Budget>) => Promise<void>;
+  updateBudget: (budget: Budget) => Promise<void>;
+  deleteBudget: (id: string) => Promise<void>;
+  
+  addRevenuePlan: (plan: Partial<RevenuePlan>) => Promise<void>;
+  updateRevenuePlan: (plan: RevenuePlan) => Promise<void>;
+  deleteRevenuePlan: (id: string) => Promise<void>;
+  
+  addGoal: (goal: Partial<Goal>) => Promise<void>;
+  updateGoal: (goal: Goal) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+  
+  addDebt: (debt: Partial<Debt>) => Promise<void>;
+  updateDebt: (debt: Debt) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  
+  addInvestment: (investment: Partial<Investment>) => Promise<void>;
+  updateInvestment: (investment: Investment) => Promise<void>;
+  deleteInvestment: (id: string) => Promise<void>;
+  addInvestmentValueLog: (investmentId: string, currentPrice: number, note?: string) => Promise<void>;
+  
+  addAsset: (asset: Partial<Asset>) => Promise<void>;
+  updateAsset: (asset: Asset) => Promise<void>;
+  deleteAsset: (id: string) => Promise<void>;
+  addAssetValueLog: (assetId: string, newValue: number, note?: string) => Promise<void>;
+  
+  addFamilyMember: (member: Partial<FamilyMember>) => Promise<void>;
+  updateFamilyMember: (member: FamilyMember) => Promise<void>;
+  deleteFamilyMember: (id: string) => Promise<void>;
+  
+  addCategory: (category: Partial<Category>) => Promise<void>;
+  updateCategory: (id: string, category: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  // Real database hooks for modular domains
-  const {
-    wallets,
-    cards,
-    loading: accountsLoading,
-    addWallet: dbAddWallet,
-    updateWallet: dbUpdateWallet,
-    deleteWallet: dbDeleteWallet,
-    addCreditCard: dbAddCard,
-    updateCreditCard: dbUpdateCard,
-    deleteCreditCard: dbDeleteCard,
-    fetchAccounts,
-  } = useAccounts();
-
-  const {
-    budgets,
-    revenuePlans,
-    loading: budgetsLoading,
-    addBudget: dbAddBudget,
-    updateBudget: dbUpdateBudget,
-    deleteBudget: dbDeleteBudget,
-    addRevenuePlan: dbAddRevenuePlan,
-    updateRevenuePlan: dbUpdateRevenuePlan,
-    deleteRevenuePlan: dbDeleteRevenuePlan,
-    fetchBudgets,
-  } = useBudgets();
-
-  const {
-    goals,
-    loading: goalsLoading,
-    addGoal: dbAddGoal,
-    updateGoal: dbUpdateGoal,
-    deleteGoal: dbDeleteGoal,
-    fetchGoals,
-  } = useGoals();
-
-  const {
-    data: activities,
-    total: totalActivities,
-    loading: transactionsLoading,
-    loadingMore: loadingMoreActivities,
-    hasMore: hasMoreActivities,
-    addTransaction: dbAddActivity,
-    editTransaction: dbEditActivity,
-    removeTransaction: dbDeleteActivity,
-    fetchTransactions: fetchActivities
-  } = useTransactions();
-
-  const {
-    debts,
-    loading: debtsLoading,
-    addDebt: dbAddDebt,
-    updateDebt: dbUpdateDebt,
-    deleteDebt: dbDeleteDebt,
-    fetchDebts,
-  } = useDebts();
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [cards, setCards] = useState<CreditCard[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [revenuePlans, setRevenuePlans] = useState<RevenuePlan[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   
-  // Initial data fetch
-  const initialFetchRef = React.useRef(false);
+  const [totalActivities, setTotalActivities] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
+  const initialFetchRef = useRef(false);
+
+  // --- Fetch Operations ---
+  const fetchAccounts = useCallback(async () => {
+    try {
+      const [wData, cData] = await Promise.all([AccountService.getAllWallets(), AccountService.getAllCreditCards()]);
+      setWallets(wData);
+      setCards(cData);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchActivities = useCallback(async (page: number = 0, reset: boolean = false, filters?: any) => {
+    try {
+      setLoadingActivities(true);
+      const response = await transactionService.getPaginated(page, undefined, filters);
+      if (reset || page === 0) {
+        setActivities(response.data);
+      } else {
+        setActivities(prev => [...prev, ...response.data]);
+      }
+      setTotalActivities(response.total);
+    } catch (err) { console.error(err); }
+    finally { setLoadingActivities(false); }
+  }, []);
+
+  const fetchBudgets = useCallback(async () => {
+    try {
+      const [bData, rpData] = await Promise.all([BudgetService.getAllBudgets(), BudgetService.getAllRevenuePlans()]);
+      setBudgets(bData);
+      setRevenuePlans(rpData);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchGoals = useCallback(async () => {
+    try {
+      const data = await GoalService.getAll();
+      setGoals(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchDebts = useCallback(async () => {
+    try {
+      const data = await DebtService.getAllDebts();
+      setDebts(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchInvestments = useCallback(async () => {
+    try {
+      const data = await InvestmentService.getAll();
+      setInvestments(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchAssets = useCallback(async () => {
+    try {
+      const data = await AssetService.getAll();
+      setAssets(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchFamilyMembers = useCallback(async () => {
+    try {
+      const data = await FamilyMemberService.getAll();
+      setFamilyMembers(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = await CategoryService.getAll();
+      setCategories(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
   useEffect(() => {
     if (!initialFetchRef.current) {
-      fetchActivities(0, true);
+      setLoading(true);
+      Promise.all([
+        fetchAccounts(),
+        fetchActivities(0, true),
+        fetchBudgets(),
+        fetchGoals(),
+        fetchDebts(),
+        fetchInvestments(),
+        fetchAssets(),
+        fetchFamilyMembers(),
+        fetchCategories()
+      ]).finally(() => setLoading(false));
       initialFetchRef.current = true;
     }
-  }, [fetchActivities]);
+  }, [fetchAccounts, fetchActivities, fetchBudgets, fetchGoals, fetchDebts, fetchInvestments, fetchAssets, fetchFamilyMembers, fetchCategories]);
 
-  // Database-backed state hooks for modular investments and assets
-  const {
-    investments,
-    loading: investmentsLoading,
-    addInvestment: dbAddInvestment,
-    updateInvestment: dbUpdateInvestment,
-    deleteInvestment: dbDeleteInvestment,
-    addInvestmentValueLog: dbAddInvestmentValueLog,
-    fetchInvestments,
-  } = useInvestments();
-
-  const {
-    assets,
-    loading: assetsLoading,
-    addAsset: dbAddAsset,
-    updateAsset: dbUpdateAsset,
-    deleteAsset: dbDeleteAsset,
-    addAssetValueLog: dbAddAssetValueLog,
-    fetchAssets,
-  } = useAssets();
-
-  const {
-    familyMembers,
-    loading: familyMembersLoading,
-    addFamilyMember: dbAddFamilyMember,
-    updateFamilyMember: dbUpdateFamilyMember,
-    deleteFamilyMember: dbDeleteFamilyMember,
-    fetchFamilyMembers,
-  } = useFamilyMembers();
-
-  const isLoading = accountsLoading || budgetsLoading || goalsLoading || transactionsLoading || debtsLoading || investmentsLoading || assetsLoading || familyMembersLoading;
-
-  // The "Brain" - Domino Effect Logic (Now using DB functions)
-  const addActivity = async (activityData: Partial<Activity>) => {
-    try {
-      await dbAddActivity({
-        orderId: activityData.orderId || `#${Math.floor(Math.random() * 100000)}`,
-        title: activityData.title || 'Untitled Transaction',
-        category: activityData.category || 'Other',
-        price: activityData.price || 0,
-        status: activityData.status || 'Completed',
-        date: activityData.date || new Date().toISOString().split('T')[0],
-        datetime: activityData.datetime || new Date().toISOString(),
-        type: activityData.type || 'expense',
-        sourceAccountId: activityData.sourceAccountId,
-        destinationAccountId: activityData.destinationAccountId,
-        description: activityData.description,
-        linkedDebtId: activityData.linkedDebtId
-      });
-    } catch (err) {
-      console.error('Failed to add transaction to database:', err);
-    }
+  // --- CRUD Operations ---
+  
+  const addActivity = async (data: Partial<Activity>) => {
+    await transactionService.create(data as any);
+    fetchActivities(0, true);
   };
 
-  const updateActivity = async (id: string, activity: Partial<Activity>) => {
-    try {
-      await dbEditActivity(id, activity);
-    } catch (err) {
-      console.error('Failed to update transaction in database:', err);
-    }
+  const updateActivity = async (id: string, data: Partial<Activity>) => {
+    await transactionService.update(id, data as any);
+    fetchActivities(0, true);
   };
 
-  const deleteActivity = async (activityId: string) => {
-    try {
-      await dbDeleteActivity(activityId);
-    } catch (err) {
-      console.error('Failed to delete transaction from database:', err);
-    }
+  const deleteActivity = async (id: string) => {
+    await transactionService.delete(id);
+    fetchActivities(0, true);
   };
 
-  const updateBudget = async (budget: Budget) => {
-    try {
-      await dbUpdateBudget(budget.id, {
-        category: budget.category,
-        limit: budget.limit,
-        spent: budget.spent,
-        month: budget.month,
-        year: budget.year
-      });
-    } catch (err) {
-      console.error('Failed to update budget in database:', err);
-    }
-  };
-
-  const deleteBudget = async (budgetId: string) => {
-    try {
-      await dbDeleteBudget(budgetId);
-    } catch (err) {
-      console.error('Failed to delete budget from database:', err);
-    }
-  };
-
-  const addBudget = async (budgetData: Partial<Budget>) => {
-    try {
-      await dbAddBudget({
-        category: budgetData.category || 'Other',
-        limit: budgetData.limit || 0,
-        spent: budgetData.spent || 0,
-        month: budgetData.month || new Date().getMonth() + 1,
-        year: budgetData.year || new Date().getFullYear(),
-        status: 'On Track'
-      });
-    } catch (err) {
-      console.error('Failed to add budget to database:', err);
-    }
-  };
-
-  const updateRevenuePlan = async (plan: RevenuePlan) => {
-    try {
-      await dbUpdateRevenuePlan(plan.id, {
-        category: plan.category,
-        target: plan.target,
-        achieved: plan.achieved,
-        month: plan.month,
-        year: plan.year
-      });
-    } catch (err) {
-      console.error('Failed to update revenue plan in database:', err);
-    }
-  };
-
-  const deleteRevenuePlan = async (planId: string) => {
-    try {
-      await dbDeleteRevenuePlan(planId);
-    } catch (err) {
-      console.error('Failed to delete revenue plan from database:', err);
-    }
-  };
-
-  const addRevenuePlan = async (planData: Partial<RevenuePlan>) => {
-    try {
-      await dbAddRevenuePlan({
-        category: planData.category || 'Other Income',
-        target: planData.target || 0,
-        achieved: planData.achieved || 0,
-        month: planData.month || new Date().getMonth() + 1,
-        year: planData.year || new Date().getFullYear(),
-        status: 'On Track'
-      });
-    } catch (err) {
-      console.error('Failed to add revenue plan to database:', err);
-    }
+  const addWallet = async (data: Partial<Wallet>) => {
+    await AccountService.addWallet(data as any);
+    fetchAccounts();
   };
 
   const updateWallet = async (wallet: Wallet) => {
-    try {
-      await dbUpdateWallet(wallet.id, {
-        name: wallet.name,
-        balance: wallet.balance,
-        limit: wallet.limit,
-        status: wallet.status
-      });
-    } catch (err) {
-      console.error('Failed to update wallet in database:', err);
-    }
+    await AccountService.updateWallet(wallet.id, wallet);
+    fetchAccounts();
   };
 
-  const deleteWallet = async (walletId: string) => {
-    try {
-      await dbDeleteWallet(walletId);
-    } catch (err) {
-      console.error('Failed to delete wallet from database:', err);
-    }
+  const deleteWallet = async (id: string) => {
+    await AccountService.deleteWallet(id);
+    fetchAccounts();
   };
 
-  const addWallet = async (walletData: Partial<Wallet>) => {
-    try {
-      await dbAddWallet({
-        name: walletData.name || 'New Account',
-        balance: walletData.balance || 0,
-        limit: walletData.limit || 0,
-        status: 'Active'
-      });
-    } catch (err) {
-      console.error('Failed to add wallet to database:', err);
-    }
+  const addCard = async (data: Partial<CreditCard>) => {
+    await AccountService.addCreditCard(data as any);
+    fetchAccounts();
   };
 
   const updateCard = async (card: CreditCard) => {
-    try {
-      await dbUpdateCard(card.id, {
-        number: card.number,
-        exp: card.exp,
-        cvv: card.cvv,
-        status: card.status,
-        theme: card.theme,
-        balance: card.balance
-      });
-    } catch (err) {
-      console.error('Failed to update card in database:', err);
-    }
+    await AccountService.updateCreditCard(card.id, card);
+    fetchAccounts();
   };
 
-  const deleteCard = async (cardId: string) => {
-    try {
-      await dbDeleteCard(cardId);
-    } catch (err) {
-      console.error('Failed to delete card from database:', err);
-    }
+  const deleteCard = async (id: string) => {
+    await AccountService.deleteCreditCard(id);
+    fetchAccounts();
   };
 
-  const addCard = async (cardData: Partial<CreditCard>) => {
-    try {
-      await dbAddCard({
-        number: cardData.number || '**** **** **** ****',
-        exp: cardData.exp || '12/29',
-        cvv: cardData.cvv || '***',
-        status: 'Active',
-        theme: cardData.theme || 'dark',
-        balance: cardData.balance || 0
-      });
-    } catch (err) {
-      console.error('Failed to add card to database:', err);
-    }
+  const addBudget = async (data: Partial<Budget>) => {
+    await BudgetService.createBudget(data as any);
+    fetchBudgets();
   };
 
-  const addGoal = async (goalData: Partial<Goal>) => {
-    try {
-      await dbAddGoal({
-        name: goalData.name || 'New Goal',
-        targetAmount: goalData.targetAmount || 0,
-        currentAmount: goalData.currentAmount || 0,
-        deadline: goalData.deadline || new Date().toISOString().split('T')[0],
-        category: goalData.category || 'Saving',
-        icon: goalData.icon || '💰',
-        status: 'In Progress'
-      });
-    } catch (err) {
-      console.error('Failed to add goal to database:', err);
-    }
+  const updateBudget = async (budget: Budget) => {
+    await BudgetService.updateBudget(budget.id, budget);
+    fetchBudgets();
+  };
+
+  const deleteBudget = async (id: string) => {
+    await BudgetService.deleteBudget(id);
+    fetchBudgets();
+  };
+
+  const addRevenuePlan = async (data: Partial<RevenuePlan>) => {
+    await BudgetService.createRevenuePlan(data as any);
+    fetchBudgets();
+  };
+
+  const updateRevenuePlan = async (plan: RevenuePlan) => {
+    await BudgetService.updateRevenuePlan(plan.id, plan);
+    fetchBudgets();
+  };
+
+  const deleteRevenuePlan = async (id: string) => {
+    await BudgetService.deleteRevenuePlan(id);
+    fetchBudgets();
+  };
+
+  const addGoal = async (data: Partial<Goal>) => {
+    await GoalService.create(data as any);
+    fetchGoals();
   };
 
   const updateGoal = async (goal: Goal) => {
-    try {
-      await dbUpdateGoal(goal.id, {
-        name: goal.name,
-        targetAmount: goal.targetAmount,
-        currentAmount: goal.currentAmount,
-        deadline: goal.deadline,
-        category: goal.category,
-        icon: goal.icon,
-        status: goal.status
-      });
-    } catch (err) {
-      console.error('Failed to update goal in database:', err);
-    }
+    await GoalService.update(goal.id, goal);
+    fetchGoals();
   };
 
-  const deleteGoal = async (goalId: string) => {
-    try {
-      await dbDeleteGoal(goalId);
-    } catch (err) {
-      console.error('Failed to delete goal from database:', err);
-    }
+  const deleteGoal = async (id: string) => {
+    await GoalService.delete(id);
+    fetchGoals();
   };
 
-  const addDebt = async (debtData: Partial<Debt>) => {
-    try {
-      await dbAddDebt({
-        title: debtData.title || 'Untitled Debt',
-        name: debtData.name || 'Unknown',
-        description: debtData.description,
-        type: debtData.type || 'payable',
-        amount: debtData.amount || 0,
-        paidAmount: debtData.paidAmount || 0,
-        dueDate: debtData.dueDate || new Date().toISOString().split('T')[0],
-        status: debtData.status || 'active',
-        paymentLogs: debtData.paymentLogs || []
-      });
-    } catch (err) {
-      console.error('Failed to add debt to database:', err);
-    }
+  const addDebt = async (data: Partial<Debt>) => {
+    await DebtService.createDebt(data as any);
+    fetchDebts();
   };
 
   const updateDebt = async (debt: Debt) => {
-    try {
-      await dbUpdateDebt(debt.id, {
-        title: debt.title,
-        name: debt.name,
-        description: debt.description,
-        type: debt.type,
-        amount: debt.amount,
-        paidAmount: debt.paidAmount,
-        dueDate: debt.dueDate,
-        status: debt.status,
-        paymentLogs: debt.paymentLogs
-      });
-    } catch (err) {
-      console.error('Failed to update debt in database:', err);
-    }
+    await DebtService.updateDebt(debt.id, debt);
+    fetchDebts();
   };
 
-  const deleteDebt = async (debtId: string) => {
-    try {
-      await dbDeleteDebt(debtId);
-    } catch (err) {
-      console.error('Failed to delete debt from database:', err);
-    }
+  const deleteDebt = async (id: string) => {
+    await DebtService.deleteDebt(id);
+    fetchDebts();
   };
 
-  const addInvestment = async (invData: Partial<Investment>) => {
-    try {
-      const qty = invData.quantity || 0;
-      const avgBuy = invData.averageBuyPrice || 0;
-      const invested = invData.investedAmount || (qty * avgBuy);
-      const currPrice = invData.currentPrice || avgBuy;
-      const currValue = invData.currentValue || (qty * currPrice);
-
-      await dbAddInvestment({
-        name: invData.name || 'Untitled Investment',
-        type: invData.type || 'Other',
-        investedAmount: invested,
-        currentValue: currValue,
-        quantity: qty,
-        averageBuyPrice: avgBuy,
-        currentPrice: currPrice,
-        purchaseDate: invData.purchaseDate || new Date().toISOString().split('T')[0],
-        lastUpdated: new Date().toISOString().split('T')[0],
-        status: invData.status || 'Active'
-      });
-    } catch (err) {
-      console.error('Failed to add investment to database:', err);
-    }
+  const addInvestment = async (data: Partial<Investment>) => {
+    await InvestmentService.create(data as any);
+    fetchInvestments();
   };
 
   const updateInvestment = async (inv: Investment) => {
-    try {
-      await dbUpdateInvestment(inv.id, {
-        name: inv.name,
-        type: inv.type,
-        investedAmount: inv.investedAmount,
-        currentValue: inv.currentValue,
-        quantity: inv.quantity,
-        averageBuyPrice: inv.averageBuyPrice,
-        currentPrice: inv.currentPrice,
-        purchaseDate: inv.purchaseDate,
-        lastUpdated: new Date().toISOString().split('T')[0],
-        status: inv.status
-      });
-    } catch (err) {
-      console.error('Failed to update investment in database:', err);
-    }
+    await InvestmentService.update(inv.id, inv);
+    fetchInvestments();
   };
 
-  const deleteInvestment = async (invId: string) => {
-    try {
-      await dbDeleteInvestment(invId);
-    } catch (err) {
-      console.error('Failed to delete investment from database:', err);
-    }
+  const deleteInvestment = async (id: string) => {
+    await InvestmentService.delete(id);
+    fetchInvestments();
   };
 
   const addInvestmentValueLog = async (invId: string, currentPrice: number, note?: string) => {
-    try {
-      const target = investments.find(i => i.id === invId);
-      if (target) {
-        const qty = target.quantity;
-        const newValue = qty * currentPrice;
-        await dbAddInvestmentValueLog(
-          invId,
-          currentPrice,
-          target.investedAmount,
-          newValue,
-          note || 'Penyesuaian Nilai Pasar'
-        );
-      }
-    } catch (err) {
-      console.error('Failed to add investment value log to database:', err);
+    const target = investments.find(i => i.id === invId);
+    if (target) {
+      await InvestmentService.addValueLog(invId, currentPrice, target.investedAmount, target.quantity * currentPrice, note || 'Adjustment');
+      fetchInvestments();
     }
   };
 
-  const addAsset = async (assetData: Partial<Asset>) => {
-    try {
-      const pPrice = assetData.purchasePrice || 0;
-      const cVal = assetData.currentValue || pPrice;
-      await dbAddAsset({
-        name: assetData.name || 'Untitled Physical Asset',
-        category: assetData.category || 'Other',
-        purchasePrice: pPrice,
-        currentValue: cVal,
-        purchaseDate: assetData.purchaseDate || new Date().toISOString().split('T')[0],
-        lastUpdated: new Date().toISOString().split('T')[0],
-        description: assetData.description
-      });
-    } catch (err) {
-      console.error('Failed to add asset to database:', err);
-    }
+  const addAsset = async (data: Partial<Asset>) => {
+    await AssetService.create(data as any);
+    fetchAssets();
   };
 
-  const updateAsset = async (as: Asset) => {
-    try {
-      await dbUpdateAsset(as.id, {
-        name: as.name,
-        category: as.category,
-        purchasePrice: as.purchasePrice,
-        currentValue: as.currentValue,
-        purchaseDate: as.purchaseDate,
-        lastUpdated: new Date().toISOString().split('T')[0],
-        description: as.description
-      });
-    } catch (err) {
-      console.error('Failed to update asset in database:', err);
-    }
+  const updateAsset = async (asset: Asset) => {
+    await AssetService.update(asset.id, asset);
+    fetchAssets();
   };
 
-  const deleteAsset = async (asId: string) => {
-    try {
-      await dbDeleteAsset(asId);
-    } catch (err) {
-      console.error('Failed to delete asset from database:', err);
-    }
+  const deleteAsset = async (id: string) => {
+    await AssetService.delete(id);
+    fetchAssets();
   };
 
   const addAssetValueLog = async (asId: string, newValue: number, note?: string) => {
-    try {
-      await dbAddAssetValueLog(asId, newValue, note || 'Penyesuaian Nilai Aset');
-    } catch (err) {
-      console.error('Failed to add asset value log to database:', err);
-    }
+    await AssetService.addValueLog(asId, newValue, note || 'Adjustment');
+    fetchAssets();
   };
 
-  const addFamilyMember = async (memberData: Partial<FamilyMember>) => {
-    try {
-      await dbAddFamilyMember({
-        name: memberData.name || 'Anggota Baru',
-        relationship: memberData.relationship || 'Other',
-        role: memberData.role || 'Member',
-        email: memberData.email || '',
-        phone: memberData.phone || '',
-        avatarUrl: memberData.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(memberData.name || 'NewMember')}`,
-        joinedDate: memberData.joinedDate || new Date().toISOString().split('T')[0],
-        status: memberData.status || 'Active',
-        accessCode: memberData.accessCode || '',
-        password: memberData.password || ''
-      });
-    } catch (err) {
-      console.error('Failed to add family member to database:', err);
-    }
+  const addFamilyMember = async (data: Partial<FamilyMember>) => {
+    await FamilyMemberService.create(data as any);
+    fetchFamilyMembers();
   };
 
   const updateFamilyMember = async (member: FamilyMember) => {
-    try {
-      await dbUpdateFamilyMember(member.id, {
-        name: member.name,
-        relationship: member.relationship,
-        role: member.role,
-        email: member.email,
-        phone: member.phone,
-        avatarUrl: member.avatarUrl,
-        joinedDate: member.joinedDate,
-        status: member.status,
-        accessCode: member.accessCode,
-        password: member.password
-      });
-    } catch (err) {
-      console.error('Failed to update family member in database:', err);
-    }
+    await FamilyMemberService.update(member.id, member);
+    fetchFamilyMembers();
   };
 
-  const deleteFamilyMember = async (memberId: string) => {
-    try {
-      await dbDeleteFamilyMember(memberId);
-    } catch (err) {
-      console.error('Failed to delete family member from database:', err);
-    }
+  const deleteFamilyMember = async (id: string) => {
+    await FamilyMemberService.delete(id);
+    fetchFamilyMembers();
   };
 
-  // Dynamically calculate balances for wallets based on activities
+  const addCategory = async (data: Partial<Category>) => {
+    await CategoryService.create(data as any);
+    fetchCategories();
+  };
+
+  const updateCategory = async (id: string, data: Partial<Category>) => {
+    await CategoryService.update(id, data as any);
+    fetchCategories();
+  };
+
+  const deleteCategory = async (id: string) => {
+    await CategoryService.delete(id);
+    fetchCategories();
+  };
+
+  // --- Dynamic Enriched Data ---
   const enrichedWallets = useMemo(() => {
     return wallets.map(wallet => {
       let currentBalance = wallet.balance || 0;
@@ -624,19 +400,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
   }, [wallets, activities]);
 
-  // Dynamically calculate balances for credit cards based on activities
   const enrichedCards = useMemo(() => {
     return cards.map(card => {
       let currentBalance = card.balance || 0;
       activities.forEach(tx => {
         if (tx.status !== 'Cancelled') {
           if (tx.type === 'expense' && tx.sourceAccountId === card.id) {
-            currentBalance += tx.price; // Expenses increase credit card debt
+            currentBalance += tx.price;
           } else if (tx.type === 'income' && tx.destinationAccountId === card.id) {
-            currentBalance -= tx.price; // Income decreases credit card debt
+            currentBalance -= tx.price;
           } else if (tx.type === 'transfer') {
-            if (tx.sourceAccountId === card.id) currentBalance += tx.price; // Cash advance increases debt
-            if (tx.destinationAccountId === card.id) currentBalance -= tx.price; // Paying off card decreases debt
+            if (tx.sourceAccountId === card.id) currentBalance += tx.price;
+            if (tx.destinationAccountId === card.id) currentBalance -= tx.price;
           }
         }
       });
@@ -646,20 +421,64 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   return (
     <FinanceContext.Provider value={{
-      wallets: enrichedWallets, cards: enrichedCards, budgets, revenuePlans, goals, activities, debts, investments, assets, familyMembers,
-      totalActivities, loadingActivities: transactionsLoading, loadingMoreActivities, hasMoreActivities, fetchActivities,
-      loading: isLoading,
-      assetsLoading,
-      addActivity, updateActivity, deleteActivity, updateBudget, deleteBudget, addBudget,
-      addRevenuePlan, updateRevenuePlan, deleteRevenuePlan,
-      updateWallet, deleteWallet, addWallet,
-      updateCard, deleteCard, addCard,
-      addGoal, updateGoal, deleteGoal,
-      addDebt, updateDebt, deleteDebt,
-      addInvestment, updateInvestment, deleteInvestment, addInvestmentValueLog,
-      addAsset, updateAsset, deleteAsset, addAssetValueLog,
-      addFamilyMember, updateFamilyMember, deleteFamilyMember,
-      fetchAccounts, fetchBudgets, fetchGoals, fetchDebts, fetchInvestments, fetchAssets, fetchFamilyMembers
+      wallets: enrichedWallets,
+      cards: enrichedCards,
+      budgets,
+      revenuePlans,
+      goals,
+      activities,
+      debts,
+      investments,
+      assets,
+      familyMembers,
+      categories,
+      loading,
+      totalActivities,
+      loadingActivities,
+      fetchAccounts,
+      fetchActivities,
+      fetchBudgets,
+      fetchGoals,
+      fetchDebts,
+      fetchInvestments,
+      fetchAssets,
+      fetchFamilyMembers,
+      fetchCategories,
+      addActivity,
+      updateActivity,
+      deleteActivity,
+      addWallet,
+      updateWallet,
+      deleteWallet,
+      addCard,
+      updateCard,
+      deleteCard,
+      addBudget,
+      updateBudget,
+      deleteBudget,
+      addRevenuePlan,
+      updateRevenuePlan,
+      deleteRevenuePlan,
+      addGoal,
+      updateGoal,
+      deleteGoal,
+      addDebt,
+      updateDebt,
+      deleteDebt,
+      addInvestment,
+      updateInvestment,
+      deleteInvestment,
+      addInvestmentValueLog,
+      addAsset,
+      updateAsset,
+      deleteAsset,
+      addAssetValueLog,
+      addFamilyMember,
+      updateFamilyMember,
+      deleteFamilyMember,
+      addCategory,
+      updateCategory,
+      deleteCategory
     }}>
       {children}
     </FinanceContext.Provider>
