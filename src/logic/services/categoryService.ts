@@ -25,7 +25,9 @@ export const CategoryService = {
   async create(category: CategoryInsert): Promise<Category> {
     const dbPayload = {
       name: category.name,
-      type: category.type
+      type: category.type,
+      created_by: category.createdBy,
+      updated_by: category.updatedBy
     };
     
     const { data, error } = await supabase
@@ -40,7 +42,9 @@ export const CategoryService = {
       name: data.name,
       type: data.type,
       createdAt: data.created_at,
-      updatedAt: data.updated_at
+      createdBy: data.created_by,
+      updatedAt: data.updated_at,
+      updatedBy: data.updated_by
     } as Category;
   },
 
@@ -48,6 +52,7 @@ export const CategoryService = {
     const dbPayload: any = {};
     if (category.name !== undefined) dbPayload.name = category.name;
     if (category.type !== undefined) dbPayload.type = category.type;
+    if (category.updatedBy !== undefined) dbPayload.updated_by = category.updatedBy;
     
     const { data, error } = await supabase
       .from('categories')
@@ -62,11 +67,32 @@ export const CategoryService = {
       name: data.name,
       type: data.type,
       createdAt: data.created_at,
-      updatedAt: data.updated_at
+      createdBy: data.created_by,
+      updatedAt: data.updated_at,
+      updatedBy: data.updated_by
     } as Category;
   },
 
   async delete(id: string): Promise<boolean> {
+    // Check if category name is used in transactions
+    const { data: category } = await supabase
+      .from('categories')
+      .select('name')
+      .eq('id', id)
+      .single();
+
+    if (category) {
+      const { count, error: countError } = await supabase
+        .from('transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('category', category.name);
+      
+      if (countError) throw countError;
+      if (count && count > 0) {
+        throw new Error('Cannot delete category that is currently used in transactions');
+      }
+    }
+
     const { error } = await supabase
       .from('categories')
       .delete()

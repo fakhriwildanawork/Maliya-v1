@@ -3,6 +3,7 @@ import { Transaction } from '../../../logic/types/transactions';
 import InputPrice from '../../../ui/components/elements/InputPrice';
 import FixDropdown from '../../../ui/components/elements/FixDropdown';
 import { useFinance } from '../../../logic/context/FinanceContext';
+import { useAuth } from '../../../logic/context/AuthContext';
 import { useBudgets } from '../../../logic/hooks/useBudgets';
 import { ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Camera, Wand2, Loader2, X } from 'lucide-react';
 import { AccountService } from '../../../logic/services/accountService';
@@ -48,11 +49,14 @@ const STATUS_OPTIONS = [
 ];
 
 export default function TransactionForm({ initialData, fixedType, prefilledCategory, onSubmit, onCancel }: TransactionFormProps) {
-  const { activities, debts } = useFinance();
+  const { activities, debts, categories, addCategory } = useFinance();
   const { budgets, revenuePlans } = useBudgets();
+  const { currentUser } = useAuth();
   
   const [realWallets, setRealWallets] = useState<Wallet[]>([]);
   const [realCards, setRealCards] = useState<CreditCard[]>([]);
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -86,7 +90,10 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     type: fixedType || 'expense',
     sourceAccountId: '',
     destinationAccountId: '',
-    datetime: new Date().toISOString().slice(0, 16),
+    datetime: (() => {
+      const now = new Date();
+      return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    })(),
     description: '',
     attachments: [],
   });
@@ -193,6 +200,11 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         .map(a => a.category)
     ));
 
+    // Get categories from DB
+    const dbCategories = categories
+      .filter(c => c.type === formData.type)
+      .map(c => c.name);
+
     // Get categories from budgets/revenue plans for current period
     const budgetCategories = currentPeriod 
       ? budgets
@@ -212,10 +224,14 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     const allValues = new Set([
       ...baseCategories.map(c => c.value),
       ...historyCategories,
+      ...dbCategories,
       ...planCategories
     ]);
 
-    return Array.from(allValues).map(val => {
+    // Remove 'Other' from the list if we want to add a custom 'Add New'
+    allValues.delete('Other');
+
+    const mapped = Array.from(allValues).map(val => {
       const isPlanned = planCategories.includes(val);
       const baseOpt = baseCategories.find(c => c.value === val);
       
@@ -229,7 +245,12 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
 
       return { value: val, label };
     });
-  }, [formData.type, currentPeriod, activities, budgets, revenuePlans]);
+
+    // Add 'Add New' option
+    mapped.push({ value: 'ADD_NEW', label: 'Add New Category...' });
+
+    return mapped;
+  }, [formData.type, currentPeriod, activities, budgets, revenuePlans, categories]);
 
   useEffect(() => {
     if (initialData) {
@@ -257,6 +278,12 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
   };
 
   const handleDropdownChange = (name: string, value: string) => {
+    if (name === 'category' && value === 'ADD_NEW') {
+      setIsAddingNewCategory(true);
+      setFormData(prev => ({ ...prev, category: '' }));
+      return;
+    }
+
     setFormData(prev => {
       const next = { ...prev, [name]: value };
       
@@ -284,9 +311,46 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const submitData = { ...formData };
+
+    // Audit fields
+    const userId = currentUser?.id || null;
+    if (initialData) {
+      submitData.updatedBy = userId || undefined;
+    } else {
+      submitData.createdBy = userId || undefined;
+      submitData.updatedBy = userId || undefined;
+    }
+
+    // Category persistence
+    const currentCategory = isAddingNewCategory ? newCategoryName.trim() : formData.category;
+    
+    if (currentCategory && formData.type !== 'transfer') {
+      const existing = categories.find(c => 
+        c.name.toLowerCase() === currentCategory.toLowerCase() && 
+        c.type === formData.type
+      );
+      
+      if (!existing) {
+        try {
+          await addCategory({
+            name: currentCategory,
+            type: formData.type as 'expense' | 'income',
+            createdBy: userId || undefined,
+            updatedBy: userId || undefined
+          });
+          submitData.category = currentCategory;
+        } catch (err) {
+          console.error("Failed to create category", err);
+          submitData.category = currentCategory;
+        }
+      } else {
+        submitData.category = existing.name;
+      }
+    }
+
     if (submitData.datetime) {
       submitData.date = format(new Date(submitData.datetime), 'dd MMM, yyyy hh:mm a');
     } else {
@@ -517,11 +581,35 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
       {formData.type !== 'transfer' && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-gray-700">Category</label>
-          <FixDropdown
-            options={dynamicCategories}
-            value={formData.category || 'Other'}
-            onChange={(value) => handleDropdownChange('category', value)}
-          />
+          {isAddingNewCategory ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Enter new category name..."
+                className="flex-1 px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingNewCategory(false);
+                  setNewCategoryName('');
+                  setFormData(prev => ({ ...prev, category: dynamicCategories[0]?.value || '' }));
+                }}
+                className="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ) : (
+            <FixDropdown
+              options={dynamicCategories}
+              value={formData.category || (dynamicCategories[0]?.value || '')}
+              onChange={(value) => handleDropdownChange('category', value)}
+            />
+          )}
         </div>
       )}
 

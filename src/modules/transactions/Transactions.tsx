@@ -41,7 +41,8 @@ export default function Transactions() {
     fetchActivities: fetchTransactions,
     addActivity: addTransaction,
     updateActivity: editTransaction,
-    deleteActivity: removeTransaction
+    deleteActivity: removeTransaction,
+    deleteActivities: removeTransactions
   } = useFinance();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,11 +171,16 @@ export default function Transactions() {
     }
   };
 
-  const handleDeleteAll = () => {
-    // Note: deleteActivity logic could be added to FinanceContext if needed
-    // For now keeping it simple as per context implementation
-    console.log('Delete all selected transactions:', selectedIds);
-    setSelectedIds([]);
+  const handleDeleteAll = async () => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} transactions?`)) {
+      try {
+        await removeTransactions(selectedIds);
+        setSelectedIds([]);
+      } catch (error) {
+        console.error('Failed to delete transactions', error);
+      }
+    }
   };
 
   const handleFormSubmit = async (data: Partial<Transaction>) => {

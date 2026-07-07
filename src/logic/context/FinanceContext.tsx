@@ -44,6 +44,7 @@ interface FinanceContextType {
   addActivity: (activity: Partial<Activity>) => Promise<void>;
   updateActivity: (id: string, activity: Partial<Activity>) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
+  deleteActivities: (ids: string[]) => Promise<void>;
   
   addWallet: (wallet: Partial<Wallet>) => Promise<void>;
   updateWallet: (wallet: Wallet) => Promise<void>;
@@ -204,17 +205,34 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const addActivity = async (data: Partial<Activity>) => {
     await transactionService.create(data as any);
-    fetchActivities(0, true);
+    await Promise.all([
+      fetchActivities(0, true),
+      fetchAccounts()
+    ]);
   };
 
   const updateActivity = async (id: string, data: Partial<Activity>) => {
     await transactionService.update(id, data as any);
-    fetchActivities(0, true);
+    await Promise.all([
+      fetchActivities(0, true),
+      fetchAccounts()
+    ]);
   };
 
   const deleteActivity = async (id: string) => {
     await transactionService.delete(id);
-    fetchActivities(0, true);
+    await Promise.all([
+      fetchActivities(0, true),
+      fetchAccounts()
+    ]);
+  };
+
+  const deleteActivities = async (ids: string[]) => {
+    await transactionService.deleteMany(ids);
+    await Promise.all([
+      fetchActivities(0, true),
+      fetchAccounts()
+    ]);
   };
 
   const addWallet = async (data: Partial<Wallet>) => {
@@ -380,49 +398,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     fetchCategories();
   };
 
-  // --- Dynamic Enriched Data ---
-  const enrichedWallets = useMemo(() => {
-    return wallets.map(wallet => {
-      let currentBalance = wallet.balance || 0;
-      activities.forEach(tx => {
-        if (tx.status !== 'Cancelled') {
-          if (tx.type === 'expense' && tx.sourceAccountId === wallet.id) {
-            currentBalance -= tx.price;
-          } else if (tx.type === 'income' && tx.destinationAccountId === wallet.id) {
-            currentBalance += tx.price;
-          } else if (tx.type === 'transfer') {
-            if (tx.sourceAccountId === wallet.id) currentBalance -= tx.price;
-            if (tx.destinationAccountId === wallet.id) currentBalance += tx.price;
-          }
-        }
-      });
-      return { ...wallet, balance: currentBalance };
-    });
-  }, [wallets, activities]);
-
-  const enrichedCards = useMemo(() => {
-    return cards.map(card => {
-      let currentBalance = card.balance || 0;
-      activities.forEach(tx => {
-        if (tx.status !== 'Cancelled') {
-          if (tx.type === 'expense' && tx.sourceAccountId === card.id) {
-            currentBalance += tx.price;
-          } else if (tx.type === 'income' && tx.destinationAccountId === card.id) {
-            currentBalance -= tx.price;
-          } else if (tx.type === 'transfer') {
-            if (tx.sourceAccountId === card.id) currentBalance += tx.price;
-            if (tx.destinationAccountId === card.id) currentBalance -= tx.price;
-          }
-        }
-      });
-      return { ...card, balance: currentBalance };
-    });
-  }, [cards, activities]);
-
   return (
     <FinanceContext.Provider value={{
-      wallets: enrichedWallets,
-      cards: enrichedCards,
+      wallets,
+      cards,
       budgets,
       revenuePlans,
       goals,
@@ -447,6 +426,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       addActivity,
       updateActivity,
       deleteActivity,
+      deleteActivities,
       addWallet,
       updateWallet,
       deleteWallet,

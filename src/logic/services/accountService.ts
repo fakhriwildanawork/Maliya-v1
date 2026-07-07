@@ -119,5 +119,28 @@ export const AccountService = {
 
     if (error) throw error;
     return true;
+  },
+
+  async updateBalance(accountId: string, type: 'wallet' | 'card', amount: number) {
+    const table = type === 'wallet' ? 'wallets' : 'credit_cards';
+    
+    // Get current balance
+    const { data: account, error: fetchError } = await supabase
+      .from(table)
+      .select('balance')
+      .eq('id', accountId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const newBalance = (account.balance || 0) + amount;
+
+    const { error: updateError } = await supabase
+      .from(table)
+      .update({ balance: newBalance })
+      .eq('id', accountId);
+
+    if (updateError) throw updateError;
+    return true;
   }
 };

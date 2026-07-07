@@ -37,6 +37,18 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
   onPageChange,
   onDelete,
 }) => {
+  const { familyMembers } = useFinance();
+
+  const getPicName = (id?: string) => {
+    if (!id) return '-';
+    if (id === '00000000-0000-4000-8000-000000000000') return 'Super Admin';
+    
+    const member = familyMembers.find(m => m.id === id);
+    if (member) return member.name;
+    
+    return 'User';
+  };
+
   const SortIcon = ({ field }: { field: string }) => {
     if (sortField !== field || !sortDirection) return <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 ml-1 inline" />;
     if (sortDirection === 'asc') return <ArrowUp className="w-3.5 h-3.5 text-green-500 ml-1 inline" />;
@@ -77,13 +89,14 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
               <th className="py-4 px-4 font-medium cursor-pointer hover:text-gray-700" onClick={() => handleSort('date')}>
                 Date <SortIcon field="date" />
               </th>
+              <th className="py-4 px-4 font-medium">PIC</th>
               <th className="py-4 px-4 font-medium w-12"></th>
             </tr>
           </thead>
           <tbody>
             {paginatedTransactions.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-gray-500">
+                <td colSpan={8} className="py-12 text-center text-gray-500">
                   No transactions found matching your criteria.
                 </td>
               </tr>
@@ -132,6 +145,9 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                     </span>
                   </td>
                   <td className="py-4 px-4 text-sm text-gray-500 whitespace-nowrap">{activity.date}</td>
+                  <td className="py-4 px-4 text-xs text-gray-400 font-medium whitespace-nowrap">
+                    {getPicName(activity.updatedBy)}
+                  </td>
                   <td className="py-4 px-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <InTableAction
@@ -219,7 +235,12 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                     {activity.type === 'income' ? '+' : activity.type === 'transfer' ? '' : '-'}
                     Rp {activity.price.toLocaleString('id-ID')}
                   </span>
-                  <span className="text-[10px] text-gray-400 mt-1">{activity.date}</span>
+                  <div className="flex flex-col items-end gap-0.5 mt-1">
+                    <span className="text-[10px] text-gray-400">{activity.date}</span>
+                    {activity.updatedBy && (
+                      <span className="text-[9px] text-gray-300 font-medium">PIC: {getPicName(activity.updatedBy)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

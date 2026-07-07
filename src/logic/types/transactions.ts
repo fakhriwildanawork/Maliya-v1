@@ -17,6 +17,8 @@ export interface Transaction {
   // Audit trail
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export type TransactionInsert = Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>;

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, Search, FolderOpen, Edit2, Trash2, ArrowUpRight, ArrowDownRight, ArrowRightLeft } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useFinance } from '../../logic/context/FinanceContext';
+import { useAuth } from '../../logic/context/AuthContext';
 import { useCategories } from '../../logic/hooks/useCategories';
 import { PrimaryButton } from '../../ui/components/elements/PrimaryButton';
 import FixDropdown from '../../ui/components/elements/FixDropdown';
@@ -19,6 +20,7 @@ const TYPE_OPTIONS = [
 export default function Categories() {
   const { activities } = useFinance();
   const { categories: dbCategories, addCategory, updateCategory, deleteCategory, loading } = useCategories();
+  const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
 
@@ -115,7 +117,10 @@ export default function Categories() {
     }).then(async (result) => {
       if (result.isConfirmed && result.value) {
         try {
-          await updateCategory(catId, { name: result.value.trim() });
+          await updateCategory(catId, { 
+            name: result.value.trim(),
+            updatedBy: currentUser?.id || undefined
+          });
           Swal.fire('Saved!', 'Category has been updated.', 'success');
         } catch (err) {
           console.error(err);
@@ -218,7 +223,12 @@ export default function Categories() {
            return;
         }
         try {
-          await addCategory({ name, type });
+          await addCategory({ 
+            name, 
+            type,
+            createdBy: currentUser?.id || undefined,
+            updatedBy: currentUser?.id || undefined
+          });
           Swal.fire('Added!', 'New category has been added.', 'success');
         } catch (err) {
           console.error(err);

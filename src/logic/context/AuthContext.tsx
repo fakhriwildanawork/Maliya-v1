@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 0. Superadmin hardcoded bypass
       if (accessCode.trim().toLowerCase() === 'spadmin' && password === 'aamiin') {
         const superadmin: FamilyMember = {
-          id: 'superadmin',
+          id: '00000000-0000-4000-8000-000000000000',
           name: 'Super Admin',
           relationship: 'Other',
           role: 'Owner',
