@@ -1,5 +1,5 @@
 import { ArrowDownLeft, ArrowRightLeft, ArrowUpRight, CreditCard, MoreHorizontal, Plus, Search, Wallet, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useFinance } from '../../logic/context/FinanceContext';
 import { useViewport } from '../../logic/context/ViewportContext';
@@ -17,9 +17,21 @@ import { useAuth } from '../../logic/context/AuthContext';
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
-  const { deleteActivity } = useFinance();
+  const { 
+    deleteActivity, 
+    fetchAccounts, 
+    fetchBudgets, 
+    fetchActivities 
+  } = useFinance();
   const { isCompact } = useViewport();
   const loading = useModuleLoading();
+
+  useEffect(() => {
+    fetchAccounts();
+    fetchBudgets();
+    fetchActivities(0, true);
+  }, [fetchAccounts, fetchBudgets, fetchActivities]);
+
   const { 
     totalBalance, 
     stats, 

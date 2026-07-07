@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -28,7 +28,12 @@ import { cn } from '../../logic/utils/classNames';
 
 export default function FamilyMembers() {
   const loading = useModuleLoading();
-  const { familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember } = useFinance();
+  const { familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember, fetchFamilyMembers } = useFinance();
+  
+  useEffect(() => {
+    fetchFamilyMembers();
+  }, [fetchFamilyMembers]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);

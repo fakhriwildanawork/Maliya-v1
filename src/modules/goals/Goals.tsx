@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Target, TrendingUp, Calendar } from 'lucide-react';
 import { useFinance } from '../../logic/context/FinanceContext';
 import { useModuleLoading } from '../../logic/hooks/useModuleLoading';
@@ -13,7 +13,12 @@ import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 
 export default function Goals() {
   const loading = useModuleLoading();
-  const { goals, addGoal, updateGoal, deleteGoal } = useFinance();
+  const { goals, addGoal, updateGoal, deleteGoal, fetchGoals } = useFinance();
+  
+  useEffect(() => {
+    fetchGoals();
+  }, [fetchGoals]);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

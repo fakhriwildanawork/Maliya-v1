@@ -21,6 +21,13 @@ interface FinanceContextType {
   loadingMoreActivities: boolean;
   hasMoreActivities: boolean;
   fetchActivities: (page?: number, reset?: boolean, filters?: any) => Promise<void>;
+  fetchAccounts: () => Promise<void>;
+  fetchBudgets: () => Promise<void>;
+  fetchGoals: () => Promise<void>;
+  fetchDebts: () => Promise<void>;
+  fetchInvestments: () => Promise<void>;
+  fetchAssets: () => Promise<void>;
+  fetchFamilyMembers: () => Promise<void>;
   debts: Debt[];
   investments: Investment[];
   assets: Asset[];
@@ -75,6 +82,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     addCreditCard: dbAddCard,
     updateCreditCard: dbUpdateCard,
     deleteCreditCard: dbDeleteCard,
+    fetchAccounts,
   } = useAccounts();
 
   const {
@@ -86,7 +94,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     deleteBudget: dbDeleteBudget,
     addRevenuePlan: dbAddRevenuePlan,
     updateRevenuePlan: dbUpdateRevenuePlan,
-    deleteRevenuePlan: dbDeleteRevenuePlan
+    deleteRevenuePlan: dbDeleteRevenuePlan,
+    fetchBudgets,
   } = useBudgets();
 
   const {
@@ -94,7 +103,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     loading: goalsLoading,
     addGoal: dbAddGoal,
     updateGoal: dbUpdateGoal,
-    deleteGoal: dbDeleteGoal
+    deleteGoal: dbDeleteGoal,
+    fetchGoals,
   } = useGoals();
 
   const {
@@ -114,7 +124,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     loading: debtsLoading,
     addDebt: dbAddDebt,
     updateDebt: dbUpdateDebt,
-    deleteDebt: dbDeleteDebt
+    deleteDebt: dbDeleteDebt,
+    fetchDebts,
   } = useDebts();
   
   // Initial data fetch
@@ -133,7 +144,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     addInvestment: dbAddInvestment,
     updateInvestment: dbUpdateInvestment,
     deleteInvestment: dbDeleteInvestment,
-    addInvestmentValueLog: dbAddInvestmentValueLog
+    addInvestmentValueLog: dbAddInvestmentValueLog,
+    fetchInvestments,
   } = useInvestments();
 
   const {
@@ -142,7 +154,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     addAsset: dbAddAsset,
     updateAsset: dbUpdateAsset,
     deleteAsset: dbDeleteAsset,
-    addAssetValueLog: dbAddAssetValueLog
+    addAssetValueLog: dbAddAssetValueLog,
+    fetchAssets,
   } = useAssets();
 
   const {
@@ -150,7 +163,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     loading: familyMembersLoading,
     addFamilyMember: dbAddFamilyMember,
     updateFamilyMember: dbUpdateFamilyMember,
-    deleteFamilyMember: dbDeleteFamilyMember
+    deleteFamilyMember: dbDeleteFamilyMember,
+    fetchFamilyMembers,
   } = useFamilyMembers();
 
   const isLoading = accountsLoading || budgetsLoading || goalsLoading || transactionsLoading || debtsLoading || investmentsLoading || assetsLoading || familyMembersLoading;
@@ -644,7 +658,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       addDebt, updateDebt, deleteDebt,
       addInvestment, updateInvestment, deleteInvestment, addInvestmentValueLog,
       addAsset, updateAsset, deleteAsset, addAssetValueLog,
-      addFamilyMember, updateFamilyMember, deleteFamilyMember
+      addFamilyMember, updateFamilyMember, deleteFamilyMember,
+      fetchAccounts, fetchBudgets, fetchGoals, fetchDebts, fetchInvestments, fetchAssets, fetchFamilyMembers
     }}>
       {children}
     </FinanceContext.Provider>

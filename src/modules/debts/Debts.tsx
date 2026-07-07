@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, HandCoins, ArrowUpRight, ArrowDownRight, Edit2, Trash2, CheckCircle2, Calendar } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { Debt } from '../../logic/types/debts';
@@ -20,7 +20,12 @@ const TYPE_OPTIONS = [
 
 export default function Debts() {
   const loading = useModuleLoading();
-  const { debts, addDebt, updateDebt, deleteDebt } = useFinance();
+  const { debts, addDebt, updateDebt, deleteDebt, fetchDebts } = useFinance();
+  
+  useEffect(() => {
+    fetchDebts();
+  }, [fetchDebts]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);

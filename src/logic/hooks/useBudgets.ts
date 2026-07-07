@@ -8,7 +8,7 @@ export function useBudgets() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchBudgets = useCallback(async () => {
     try {
       setLoading(true);
       const [bData, rpData] = await Promise.all([
@@ -26,8 +26,8 @@ export function useBudgets() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchBudgets();
+  }, [fetchBudgets]);
 
   const addBudget = async (budget: BudgetInsert) => {
     const newBudget = await BudgetService.createBudget(budget);
@@ -68,7 +68,7 @@ export function useBudgets() {
     revenuePlans,
     loading,
     error,
-    fetchData,
+    fetchBudgets,
     addBudget,
     updateBudget,
     deleteBudget,

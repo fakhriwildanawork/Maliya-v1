@@ -30,8 +30,13 @@ export default function Accounts() {
     addCard: handleAddCard,
     updateCard: handleUpdateCard,
     deleteCard: handleDeleteCard,
+    fetchAccounts,
   } = useFinance();
   
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
+
   // 1. Calculations
   const walletBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
   const creditCardDebt = cards.reduce((sum, c) => sum + c.balance, 0); // Credit card balance is debt

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../logic/context/FinanceContext';
 import { useBudgets } from '../../logic/hooks/useBudgets';
 import { PrimaryButton } from '../../ui/components/elements/PrimaryButton';
@@ -11,8 +11,19 @@ import Modal from '../../ui/components/common/Modal';
 import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 
 export default function RevenuePlan() {
-  const { addActivity } = useFinance();
-  const { revenuePlans, addRevenuePlan, updateRevenuePlan, deleteRevenuePlan, loading } = useBudgets();
+  const { 
+    addActivity, 
+    revenuePlans, 
+    addRevenuePlan, 
+    updateRevenuePlan, 
+    deleteRevenuePlan, 
+    loading,
+    fetchBudgets
+  } = useFinance();
+  
+  useEffect(() => {
+    fetchBudgets();
+  }, [fetchBudgets]);
   
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isLogIncomeModalOpen, setIsLogIncomeModalOpen] = useState(false);

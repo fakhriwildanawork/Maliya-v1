@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, ChevronLeft, ChevronRight, Target, TrendingDown, Wallet, Copy } from 'lucide-react';
 import BudgetTable from './components/BudgetTable';
 import { PrimaryButton } from '../../ui/components/elements/PrimaryButton';
@@ -21,8 +21,13 @@ export default function Budgets() {
     updateBudget, 
     deleteBudget, 
     addActivity,
+    fetchBudgets,
   } = useFinance();
   
+  useEffect(() => {
+    fetchBudgets();
+  }, [fetchBudgets]);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);

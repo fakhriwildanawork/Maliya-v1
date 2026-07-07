@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../logic/context/FinanceContext';
 import { useModuleLoading } from '../../logic/hooks/useModuleLoading';
 import { PrimaryButton } from '../../ui/components/elements/PrimaryButton';
@@ -12,7 +12,12 @@ import Modal from '../../ui/components/common/Modal';
 
 export default function Assets() {
   const loading = useModuleLoading();
-  const { wallets, cards, investments, debts, assets, addAsset, updateAsset } = useFinance();
+  const { wallets, cards, investments, debts, assets, addAsset, updateAsset, fetchAssets } = useFinance();
+  
+  useEffect(() => {
+    fetchAssets();
+  }, [fetchAssets]);
+
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [activeTab, setActiveTab] = useState<'Physical' | 'Financial' | 'Liabilities' | 'Receivables'>('Financial');

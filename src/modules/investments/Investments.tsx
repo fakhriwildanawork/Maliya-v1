@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '../../logic/context/FinanceContext';
 import { useModuleLoading } from '../../logic/hooks/useModuleLoading';
 import { PrimaryButton } from '../../ui/components/elements/PrimaryButton';
@@ -12,7 +12,12 @@ import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 
 export default function Investments() {
   const loading = useModuleLoading();
-  const { investments, addInvestment, updateInvestment } = useFinance();
+  const { investments, addInvestment, updateInvestment, fetchInvestments } = useFinance();
+  
+  useEffect(() => {
+    fetchInvestments();
+  }, [fetchInvestments]);
+
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingInv, setEditingInv] = useState<Investment | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('All');
