@@ -230,7 +230,7 @@ export default function Budgets() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mb-6 overflow-x-auto hide-scrollbar pb-2">
+      <div className="flex items-center gap-4 mb-6 overflow-x-auto hide-scrollbar pt-1 pb-3 flex-shrink-0">
         <button 
           onClick={() => changeMonth(-1)}
           className="p-2 min-h-[44px] min-w-[44px] hover:bg-white rounded-xl border border-transparent hover:border-gray-200 transition-all flex items-center justify-center flex-shrink-0"

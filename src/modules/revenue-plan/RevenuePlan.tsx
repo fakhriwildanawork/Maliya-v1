@@ -119,7 +119,7 @@ export default function RevenuePlan() {
         </div>
       </div>
 
-      <div className="flex items-center gap-md mb-lg overflow-x-auto hide-scrollbar pb-2">
+      <div className="flex items-center gap-md mb-lg overflow-x-auto hide-scrollbar pt-1 pb-3 flex-shrink-0">
         <button 
           onClick={() => changeMonth(-1)}
           className="p-sm hover:bg-bg-main rounded-lg border border-transparent hover:border-border-main transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
