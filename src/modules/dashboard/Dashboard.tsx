@@ -13,7 +13,10 @@ import Swal from 'sweetalert2';
 
 import { useModuleLoading } from '../../logic/hooks/useModuleLoading';
 
+import { useAuth } from '../../logic/context/AuthContext';
+
 export default function Dashboard() {
+  const { currentUser } = useAuth();
   const { deleteActivity } = useFinance();
   const { isCompact } = useViewport();
   const loading = useModuleLoading();
@@ -42,7 +45,7 @@ export default function Dashboard() {
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Good morning, Oripio</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Hello, {currentUser?.name || "Oripio"}</h1>
             <p className="text-gray-500">Stay on top of your tasks, monitor progress, and track status.</p>
           </div>
 

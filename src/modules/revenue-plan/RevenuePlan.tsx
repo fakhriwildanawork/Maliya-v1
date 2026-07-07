@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../logic/context/FinanceContext';
 import { useBudgets } from '../../logic/hooks/useBudgets';
-import { useTransactions } from '../../logic/hooks/useTransactions';
 import { PrimaryButton } from '../../ui/components/elements/PrimaryButton';
 import { Plus, Target, TrendingUp, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { RevenuePlan as RevenuePlanType, Activity } from '../../logic/types/finance';
@@ -14,7 +13,6 @@ import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 export default function RevenuePlan() {
   const { addActivity } = useFinance();
   const { revenuePlans, addRevenuePlan, updateRevenuePlan, deleteRevenuePlan, loading } = useBudgets();
-  const { addTransaction } = useTransactions();
   
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isLogIncomeModalOpen, setIsLogIncomeModalOpen] = useState(false);
@@ -68,7 +66,7 @@ export default function RevenuePlan() {
   const handleIncomeSubmit = async (data: Partial<Activity>) => {
     if (data.type === 'income') {
       try {
-        await addTransaction({
+        await addActivity({
           orderId: `#${Math.floor(Math.random() * 100000)}`,
           title: data.title || 'Log Income',
           category: data.category || 'Revenue',

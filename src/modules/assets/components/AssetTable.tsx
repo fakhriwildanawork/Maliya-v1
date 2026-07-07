@@ -6,6 +6,7 @@ import Modal from '../../../ui/components/common/Modal';
 import InputPrice from '../../../ui/components/elements/InputPrice';
 import { Button } from '../../../ui/components/elements/Button';
 import { InTableAction } from '../../../ui/components/elements/InTableAction';
+import Swal from 'sweetalert2';
 
 interface AssetTableProps {
   onEdit: (as: Asset) => void;
@@ -142,9 +143,32 @@ export default function AssetTable({ onEdit, filterCategory }: AssetTableProps) 
                           variant="delete"
                           icon={Trash2}
                           onClick={() => {
-                            if (confirm(`Delete asset record for ${as.name}?`)) {
-                              deleteAsset(as.id);
-                            }
+                            Swal.fire({
+                              title: 'Hapus Aset Fisik?',
+                              text: `Apakah Anda yakin ingin menghapus data aset ${as.name}? Tindakan ini tidak dapat dibatalkan.`,
+                              icon: 'warning',
+                              showCancelButton: true,
+                              confirmButtonColor: '#10B981',
+                              cancelButtonColor: '#EF4444',
+                              confirmButtonText: 'Ya, hapus!',
+                              cancelButtonText: 'Batal'
+                            }).then((result) => {
+                              if (result.isConfirmed) {
+                                deleteAsset(as.id).then(() => {
+                                  Swal.fire({
+                                    title: 'Berhasil!',
+                                    text: 'Aset telah dihapus.',
+                                    icon: 'success'
+                                  });
+                                }).catch((err) => {
+                                  Swal.fire({
+                                    title: 'Gagal!',
+                                    text: err.message || 'Gagal menghapus aset.',
+                                    icon: 'error'
+                                  });
+                                });
+                              }
+                            });
                           }}
                           title="Delete"
                         />

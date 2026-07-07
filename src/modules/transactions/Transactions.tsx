@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, MoreHorizontal, Filter, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { useTransactions } from '../../logic/hooks/useTransactions';
 import { Transaction, TransactionInsert } from '../../logic/types/transactions';
 import { TransactionsTable } from './components/TransactionsTable';
 import Modal from '../../ui/components/common/Modal';
@@ -36,14 +35,14 @@ const STATUS_OPTIONS = [
 
 export default function Transactions() {
   const {
-    data: transactions,
-    total,
-    loading,
-    fetchTransactions,
-    addTransaction,
-    editTransaction,
-    removeTransaction
-  } = useTransactions();
+    activities: transactions,
+    totalActivities: total,
+    loadingActivities: loading,
+    fetchActivities: fetchTransactions,
+    addActivity: addTransaction,
+    updateActivity: editTransaction,
+    deleteActivity: removeTransaction
+  } = useFinance();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);

@@ -21,6 +21,9 @@ export default function Accounts() {
   const { 
     wallets, 
     cards, 
+    investments,
+    debts,
+    assets,
     addWallet: handleAddWallet,
     updateWallet: handleUpdateWallet,
     deleteWallet: handleDeleteWallet,
@@ -28,6 +31,32 @@ export default function Accounts() {
     updateCard: handleUpdateCard,
     deleteCard: handleDeleteCard,
   } = useFinance();
+  
+  // 1. Calculations
+  const walletBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
+  const creditCardDebt = cards.reduce((sum, c) => sum + c.balance, 0); // Credit card balance is debt
+  const investmentValue = investments?.reduce((sum, inv) => sum + inv.currentValue, 0) || 0;
+  
+  // Receivables (Piutang aktif: amount - paidAmount)
+  const receivablesValue = debts
+    ?.filter(d => d.type === 'receivable' && d.status === 'active')
+    .reduce((sum, d) => sum + (d.amount - d.paidAmount), 0) || 0;
+
+  const totalFinancialAssets = walletBalance + investmentValue + receivablesValue;
+
+  // Physical Assets value
+  const totalPhysicalAssets = assets?.reduce((sum, as) => sum + as.currentValue, 0) || 0;
+
+  const totalAssetsValue = totalFinancialAssets + totalPhysicalAssets;
+
+  // Liabilities (Hutang aktif + Credit Cards)
+  const debtsValue = debts
+    ?.filter(d => d.type === 'payable' && d.status === 'active')
+    .reduce((sum, d) => sum + (d.amount - d.paidAmount), 0) || 0;
+    
+  const totalLiabilitiesValue = debtsValue + creditCardDebt;
+
+  const netWorth = totalAssetsValue - totalLiabilitiesValue;
   
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -187,7 +216,7 @@ export default function Accounts() {
              <div className="flex justify-between items-start mb-2 md:mb-4">
                 <span className="text-xs md:text-sm text-gray-500 font-medium">Total Assets</span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 truncate">Rp 745.200.000</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 truncate">Rp {totalAssetsValue.toLocaleString('id-ID')}</h2>
               <div className="flex items-center gap-2 text-xs md:text-sm">
                 <span className="text-green-500 font-medium flex items-center bg-green-50 px-2 py-0.5 rounded-md">
                   <ArrowUpRight className="w-3 h-3 mr-1" />
@@ -199,7 +228,7 @@ export default function Accounts() {
              <div className="flex justify-between items-start mb-2 md:mb-4">
                 <span className="text-xs md:text-sm text-gray-500 font-medium">Total Liabilities</span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 truncate">Rp 55.828.000</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 truncate">Rp {totalLiabilitiesValue.toLocaleString('id-ID')}</h2>
               <div className="flex items-center gap-2 text-xs md:text-sm">
                 <span className="text-red-500 font-medium flex items-center bg-red-50 px-2 py-0.5 rounded-md">
                   <ArrowDownLeft className="w-3 h-3 mr-1" />
@@ -211,7 +240,7 @@ export default function Accounts() {
              <div className="flex justify-between items-start mb-2 md:mb-4">
                 <span className="text-xs md:text-sm text-gray-500 font-medium">Net Worth</span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 truncate">Rp 689.372.000</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 truncate">Rp {netWorth.toLocaleString('id-ID')}</h2>
               <div className="flex items-center gap-2 text-xs md:text-sm">
                 <span className="text-green-500 font-medium flex items-center bg-green-50 px-2 py-0.5 rounded-md">
                   <ArrowUpRight className="w-3 h-3 mr-1" />

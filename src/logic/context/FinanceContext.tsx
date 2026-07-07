@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { Wallet, CreditCard, Budget, Activity, Goal, RevenuePlan, Debt, Investment, InvestmentHistoryLog, Asset, AssetHistoryLog, FamilyMember } from '../types/finance';
 import { useInvestments } from '../hooks/useInvestments';
 import { useAssets } from '../hooks/useAssets';
@@ -16,6 +16,11 @@ interface FinanceContextType {
   revenuePlans: RevenuePlan[];
   goals: Goal[];
   activities: Activity[];
+  totalActivities: number;
+  loadingActivities: boolean;
+  loadingMoreActivities: boolean;
+  hasMoreActivities: boolean;
+  fetchActivities: (page?: number, reset?: boolean, filters?: any) => Promise<void>;
   debts: Debt[];
   investments: Investment[];
   assets: Asset[];
@@ -94,11 +99,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const {
     data: activities,
+    total: totalActivities,
     loading: transactionsLoading,
+    loadingMore: loadingMoreActivities,
+    hasMore: hasMoreActivities,
     addTransaction: dbAddActivity,
     editTransaction: dbEditActivity,
     removeTransaction: dbDeleteActivity,
-    fetchTransactions
+    fetchTransactions: fetchActivities
   } = useTransactions();
 
   const {
@@ -113,10 +121,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const initialFetchRef = React.useRef(false);
   useEffect(() => {
     if (!initialFetchRef.current) {
-      fetchTransactions(0, true);
+      fetchActivities(0, true);
       initialFetchRef.current = true;
     }
-  }, [fetchTransactions]);
+  }, [fetchActivities]);
 
   // Database-backed state hooks for modular investments and assets
   const {
@@ -582,12 +590,53 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Dynamically calculate balances for wallets based on activities
+  const enrichedWallets = useMemo(() => {
+    return wallets.map(wallet => {
+      let currentBalance = wallet.balance || 0;
+      activities.forEach(tx => {
+        if (tx.status !== 'Cancelled') {
+          if (tx.type === 'expense' && tx.sourceAccountId === wallet.id) {
+            currentBalance -= tx.price;
+          } else if (tx.type === 'income' && tx.destinationAccountId === wallet.id) {
+            currentBalance += tx.price;
+          } else if (tx.type === 'transfer') {
+            if (tx.sourceAccountId === wallet.id) currentBalance -= tx.price;
+            if (tx.destinationAccountId === wallet.id) currentBalance += tx.price;
+          }
+        }
+      });
+      return { ...wallet, balance: currentBalance };
+    });
+  }, [wallets, activities]);
+
+  // Dynamically calculate balances for credit cards based on activities
+  const enrichedCards = useMemo(() => {
+    return cards.map(card => {
+      let currentBalance = card.balance || 0;
+      activities.forEach(tx => {
+        if (tx.status !== 'Cancelled') {
+          if (tx.type === 'expense' && tx.sourceAccountId === card.id) {
+            currentBalance += tx.price; // Expenses increase credit card debt
+          } else if (tx.type === 'income' && tx.destinationAccountId === card.id) {
+            currentBalance -= tx.price; // Income decreases credit card debt
+          } else if (tx.type === 'transfer') {
+            if (tx.sourceAccountId === card.id) currentBalance += tx.price; // Cash advance increases debt
+            if (tx.destinationAccountId === card.id) currentBalance -= tx.price; // Paying off card decreases debt
+          }
+        }
+      });
+      return { ...card, balance: currentBalance };
+    });
+  }, [cards, activities]);
+
   return (
     <FinanceContext.Provider value={{
-      wallets, cards, budgets, revenuePlans, goals, activities, debts, investments, assets, familyMembers,
+      wallets: enrichedWallets, cards: enrichedCards, budgets, revenuePlans, goals, activities, debts, investments, assets, familyMembers,
+      totalActivities, loadingActivities: transactionsLoading, loadingMoreActivities, hasMoreActivities, fetchActivities,
       loading: isLoading,
       assetsLoading,
-      addActivity, deleteActivity, updateBudget, deleteBudget, addBudget,
+      addActivity, updateActivity, deleteActivity, updateBudget, deleteBudget, addBudget,
       addRevenuePlan, updateRevenuePlan, deleteRevenuePlan,
       updateWallet, deleteWallet, addWallet,
       updateCard, deleteCard, addCard,

@@ -118,6 +118,12 @@ export const AssetService = {
   },
 
   async delete(id: string): Promise<boolean> {
+    // Delete related asset history logs first to prevent foreign key constraint issues
+    await supabase
+      .from('asset_history_logs')
+      .delete()
+      .eq('asset_id', id);
+
     const { error } = await supabase
       .from('assets')
       .delete()
