@@ -4,14 +4,21 @@ import { JournalEntry } from '../types/ledger';
 
 export const ledgerService = {
   // Generate double-entry accounting journal entries from real transactions and accounts
-  async getJournalEntries(): Promise<JournalEntry[]> {
+  async getJournalEntries(
+    page: number = 0,
+    search?: string
+  ): Promise<{ data: JournalEntry[]; total: number; hasMore: boolean }> {
     try {
-      const [transactions, wallets, cards] = await Promise.all([
-        transactionService.getAll(),
+      // We only fetch transactions for the current page to save Supabase egress!
+      const limit = 25; // 25 transactions = 50 journal entries per page
+      
+      const [transactionsResponse, wallets, cards] = await Promise.all([
+        transactionService.getPaginated(page, limit, search ? { search } : undefined),
         AccountService.getAllWallets(),
         AccountService.getAllCreditCards()
       ]);
 
+      const transactions = transactionsResponse.data;
       const entries: JournalEntry[] = [];
 
       const getAccountName = (id?: string) => {
@@ -46,6 +53,7 @@ export const ledgerService = {
         entries.push({
           id: `${tx.id}-dr`,
           transactionId: tx.orderId || tx.id,
+          transactionTitle: tx.title,
           date: tx.date,
           accountName: debitAccount,
           debit: tx.price,
@@ -56,6 +64,7 @@ export const ledgerService = {
         entries.push({
           id: `${tx.id}-cr`,
           transactionId: tx.orderId || tx.id,
+          transactionTitle: tx.title,
           date: tx.date,
           accountName: creditAccount,
           debit: 0,
@@ -63,7 +72,11 @@ export const ledgerService = {
         });
       });
 
-      return entries;
+      return {
+        data: entries,
+        total: transactionsResponse.total,
+        hasMore: transactionsResponse.hasMore
+      };
     } catch (error) {
       console.error('Failed to retrieve ledger entries:', error);
       throw error;

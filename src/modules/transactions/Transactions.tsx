@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, MoreHorizontal, Filter, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTransactions } from '../../logic/hooks/useTransactions';
-import { Transaction } from '../../logic/types/transactions';
+import { Transaction, TransactionInsert } from '../../logic/types/transactions';
 import { TransactionsTable } from './components/TransactionsTable';
 import Modal from '../../ui/components/common/Modal';
 import { PrimaryButton } from '../../ui/components/elements/PrimaryButton';
@@ -35,19 +35,19 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Transactions() {
-  const { 
-    activities: transactions, 
-    addActivity: addTransaction, 
-    deleteActivity: removeTransaction,
-  } = useFinance();
+  const {
+    data: transactions,
+    total,
+    loading,
+    fetchTransactions,
+    addTransaction,
+    editTransaction,
+    removeTransaction
+  } = useTransactions();
   
-  const loading = useModuleLoading();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-
-  // We'll use a local state to track if we've completed the first fetch to avoid flickering
-  const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
 
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -58,45 +58,66 @@ export default function Transactions() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Since FinanceContext already fetches, we just need to know when it's done or if we have data
+  const queryDebounceRef = React.useRef<any>(null);
+
+  // Reset page to 1 when filters change
   useEffect(() => {
-    if (transactions.length > 0) {
-      setHasFetchedOnce(true);
+    setCurrentPage(1);
+  }, [searchQuery, filterType, filterStatus, dateRange]);
+
+  useEffect(() => {
+    if (queryDebounceRef.current) {
+      clearTimeout(queryDebounceRef.current);
     }
-  }, [transactions]);
+
+    const dateFrom = dateRange?.from ? dateRange.from.toISOString() : undefined;
+    const dateTo = dateRange?.to ? dateRange.to.toISOString() : undefined;
+
+    const performFetch = () => {
+      fetchTransactions(currentPage - 1, true, {
+        search: searchQuery,
+        type: filterType,
+        status: filterStatus,
+        dateFrom,
+        dateTo
+      });
+    };
+
+    if (searchQuery) {
+      queryDebounceRef.current = setTimeout(performFetch, 300);
+    } else {
+      performFetch();
+    }
+
+    return () => {
+      if (queryDebounceRef.current) {
+        clearTimeout(queryDebounceRef.current);
+      }
+    };
+  }, [currentPage, searchQuery, filterType, filterStatus, dateRange, fetchTransactions]);
 
   const processedTransactions = useMemo(() => {
-    return [...transactions]
-      .filter(tx => {
-        const matchSearch = tx.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            tx.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            tx.category.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchType = filterType === 'All' || tx.type === filterType;
-        const matchStatus = filterStatus === 'All' || tx.status === filterStatus;
-        const txDate = parse(tx.date, 'dd MMM, yyyy hh:mm a', new Date());
-        const matchDate = !dateRange || (!dateRange.from || txDate >= dateRange.from) && (!dateRange.to || txDate <= dateRange.to);
+    return [...transactions].sort((a, b) => {
+      if (!sortField || !sortDirection) return 0;
+      
+      let valA: any = a[sortField as keyof Transaction];
+      let valB: any = b[sortField as keyof Transaction];
 
-        return matchSearch && matchType && matchStatus && matchDate;
-      })
-      .sort((a, b) => {
-        const field = sortDirection ? sortField : 'date';
-        const dir = sortDirection ? sortDirection : 'desc';
-        
-        let valA: any = a[field as keyof Transaction];
-        let valB: any = b[field as keyof Transaction];
+      if (sortField === 'date') {
+        valA = new Date(a.date).getTime();
+        valB = new Date(b.date).getTime();
+      } else if (sortField === 'price') {
+        valA = Number(a.price);
+        valB = Number(b.price);
+      }
 
-        if (field === 'date') {
-          valA = new Date(a.date).getTime();
-          valB = new Date(b.date).getTime();
-        }
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [transactions, sortField, sortDirection]);
 
-        if (valA < valB) return dir === 'asc' ? -1 : 1;
-        if (valA > valB) return dir === 'asc' ? 1 : -1;
-        return 0;
-      });
-  }, [transactions, searchQuery, filterType, filterStatus, sortField, sortDirection, dateRange]);
-
-  const totalPages = Math.ceil(processedTransactions.length / 50) || 1;
+  const totalPages = Math.ceil(total / 25) || 1;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -160,12 +181,9 @@ export default function Transactions() {
   const handleFormSubmit = async (data: Partial<Transaction>) => {
     try {
       if (selectedTransaction) {
-        // FinanceContext doesn't have editActivity yet, but we can add it or just use dbEditActivity indirectly if needed
-        // For now let's assume we might need to add it to context or just handle it here
-        // Actually, let's just use addActivity since context handles creation
-        await addTransaction(data); 
+        await editTransaction(selectedTransaction.id, data); 
       } else {
-        await addTransaction(data);
+        await addTransaction(data as TransactionInsert);
       }
       setIsFormOpen(false);
       setSelectedTransaction(null);

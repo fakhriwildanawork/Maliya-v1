@@ -12,6 +12,7 @@ export interface BaseAuditLog {
 export interface JournalEntry extends BaseAuditLog {
   id: string;
   transactionId?: string;
+  transactionTitle?: string;
   date: string;
   accountName: string;
   debit: number;

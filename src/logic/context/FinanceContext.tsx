@@ -113,7 +113,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const initialFetchRef = React.useRef(false);
   useEffect(() => {
     if (!initialFetchRef.current) {
-      fetchTransactions(true);
+      fetchTransactions(0, true);
       initialFetchRef.current = true;
     }
   }, [fetchTransactions]);

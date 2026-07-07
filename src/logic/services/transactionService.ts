@@ -5,16 +5,46 @@ import { getFetchLimit } from './fetchingCenter';
 const TABLE_NAME = 'transactions';
 
 export const transactionService = {
-  // Fetch paginated transactions for infinite scroll
-  getPaginated: async (page: number = 0, customLimit?: number) => {
+  // Fetch paginated transactions for infinite scroll or paginated table
+  getPaginated: async (
+    page: number = 0, 
+    customLimit?: number,
+    filters?: {
+      search?: string;
+      type?: string;
+      status?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    }
+  ) => {
     const limit = customLimit || getFetchLimit('TransactionsList');
     const from = page * limit;
     const to = from + limit - 1;
 
-    const { data, error, count } = await supabase
+    let query = supabase
       .from(TABLE_NAME)
-      .select('*', { count: 'exact' })
-      .order('date', { ascending: false })
+      .select('*', { count: 'exact' });
+
+    if (filters) {
+      if (filters.type && filters.type !== 'All') {
+        query = query.eq('type', filters.type);
+      }
+      if (filters.status && filters.status !== 'All') {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.search) {
+        query = query.or(`title.ilike.%${filters.search}%,category.ilike.%${filters.search}%,order_id.ilike.%${filters.search}%`);
+      }
+      if (filters.dateFrom) {
+        query = query.gte('datetime', filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        query = query.lte('datetime', filters.dateTo);
+      }
+    }
+
+    const { data, error, count } = await query
+      .order('datetime', { ascending: false })
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -24,7 +54,7 @@ export const transactionService = {
     }
 
     // Map database snake_case to frontend camelCase
-    const mappedData: Transaction[] = data.map(item => ({
+    const mappedData: Transaction[] = (data || []).map(item => ({
       id: item.id,
       orderId: item.order_id,
       title: item.title,

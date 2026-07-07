@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Search, Download, Filter, BookOpen } from 'lucide-react';
 import { useLedger } from '../../logic/hooks/useLedger';
 import { cn } from '../../logic/utils/classNames';
@@ -13,33 +13,51 @@ const SORT_OPTIONS = [
 ];
 
 export default function Ledger() {
-  const { ledgerEntries: journalEntries, loading } = useLedger();
+  const { ledgerEntries: journalEntries, totalTransactions, loading, fetchLedger } = useLedger();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('date_desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
-  const filteredEntries = useMemo(() => {
-    let result = journalEntries.filter(entry => 
-      entry.accountName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (entry.transactionId && entry.transactionId.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+  // Reset page to 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
-    result = result.sort((a, b) => {
+  const queryDebounceRef = React.useRef<any>(null);
+
+  useEffect(() => {
+    if (queryDebounceRef.current) {
+      clearTimeout(queryDebounceRef.current);
+    }
+
+    const performFetch = () => {
+      fetchLedger(currentPage - 1, searchQuery);
+    };
+
+    if (searchQuery) {
+      queryDebounceRef.current = setTimeout(performFetch, 300);
+    } else {
+      performFetch();
+    }
+
+    return () => {
+      if (queryDebounceRef.current) {
+        clearTimeout(queryDebounceRef.current);
+      }
+    };
+  }, [currentPage, searchQuery, fetchLedger]);
+
+  const paginatedEntries = useMemo(() => {
+    return [...journalEntries].sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       if (sortOrder === 'date_desc') return dateB - dateA;
       return dateA - dateB;
     });
+  }, [journalEntries, sortOrder]);
 
-    return result;
-  }, [journalEntries, searchQuery, sortOrder]);
-
-  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage) || 1;
-  const paginatedEntries = filteredEntries.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = Math.ceil(totalTransactions / 25) || 1;
 
   const formatCurrency = (amount: number) => {
     if (amount === 0) return '-';
@@ -51,10 +69,10 @@ export default function Ledger() {
   };
 
   const handleExport = () => {
-    const headers = ['Date', 'Transaction ID', 'Account', 'Debit', 'Credit'];
-    const csvData = filteredEntries.map(entry => [
+    const headers = ['Date', 'Transaction', 'Account', 'Debit', 'Credit'];
+    const csvData = paginatedEntries.map(entry => [
       `"${entry.date}"`,
-      entry.transactionId || '',
+      `"${entry.transactionTitle || ''}"`,
       `"${entry.accountName}"`,
       entry.debit,
       entry.credit
@@ -113,7 +131,7 @@ export default function Ledger() {
                 <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
                   <tr>
                     <th className="px-6 py-4 font-medium">Date</th>
-                    <th className="px-6 py-4 font-medium">Ref ID</th>
+                    <th className="px-6 py-4 font-medium">Transaction</th>
                     <th className="px-6 py-4 font-medium">Account / Category</th>
                     <th className="px-6 py-4 font-medium text-right">Debit</th>
                     <th className="px-6 py-4 font-medium text-right">Credit</th>
@@ -134,12 +152,8 @@ export default function Ledger() {
                         <td className="px-6 py-4 text-gray-500">
                           {!isPair && entry.date}
                         </td>
-                        <td className="px-6 py-4">
-                          {!isPair && (
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                              {entry.transactionId}
-                            </span>
-                          )}
+                        <td className="px-6 py-4 text-gray-700 text-sm font-medium">
+                          {!isPair && entry.transactionTitle}
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-900">
                           <div className={cn("flex items-center", entry.credit > 0 && "ml-8")}>

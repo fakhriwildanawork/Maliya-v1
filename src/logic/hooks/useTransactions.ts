@@ -4,6 +4,7 @@ import { Transaction, TransactionInsert } from '../types/transactions';
 
 export function useTransactions() {
   const [data, setData] = useState<Transaction[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -12,31 +13,43 @@ export function useTransactions() {
   const pageRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchTransactions = useCallback(async (reset: boolean = false) => {
+  const fetchTransactions = useCallback(async (
+    page: number = 0,
+    reset: boolean = false,
+    filters?: {
+      search?: string;
+      type?: string;
+      status?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    }
+  ) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
 
     try {
-      if (reset) {
+      if (reset || page === 0) {
         setLoading(true);
         pageRef.current = 0;
       } else {
-        if (!hasMore || loading || loadingMore) return;
         setLoadingMore(true);
       }
       
       setError(null);
       
-      const response = await transactionService.getPaginated(pageRef.current);
+      const response = await transactionService.getPaginated(page, undefined, filters);
       
       if (!abortControllerRef.current.signal.aborted) {
-        setData(prev => reset ? response.data : [...prev, ...response.data]);
-        setHasMore(response.hasMore);
-        if (response.hasMore) {
-          pageRef.current += 1;
+        if (reset || page === 0) {
+          setData(response.data);
+        } else {
+          setData(prev => [...prev, ...response.data]);
         }
+        setTotal(response.total);
+        setHasMore(response.hasMore);
+        pageRef.current = page + 1;
       }
     } catch (err: any) {
       if (err.name !== 'AbortError' && !abortControllerRef.current?.signal.aborted) {
@@ -49,7 +62,7 @@ export function useTransactions() {
         setLoadingMore(false);
       }
     }
-  }, [hasMore, loading, loadingMore]);
+  }, []);
 
   const addTransaction = async (transaction: TransactionInsert) => {
     try {
@@ -74,6 +87,7 @@ export function useTransactions() {
       };
       
       setData(prev => [mappedNewTransaction, ...prev]);
+      setTotal(prev => prev + 1);
       return mappedNewTransaction;
     } catch (err: any) {
       setError(err.message || 'Failed to create transaction');
@@ -120,6 +134,7 @@ export function useTransactions() {
       setLoading(true);
       await transactionService.delete(id);
       setData(prev => prev.filter(t => t.id !== id));
+      setTotal(prev => Math.max(0, prev - 1));
       return true;
     } catch (err: any) {
       setError(err.message || 'Failed to delete transaction');
@@ -131,6 +146,7 @@ export function useTransactions() {
 
   return {
     data,
+    total,
     loading,
     loadingMore,
     error,

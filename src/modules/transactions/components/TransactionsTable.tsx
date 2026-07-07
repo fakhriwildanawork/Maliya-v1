@@ -43,8 +43,9 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
     return <ArrowDown className="w-3.5 h-3.5 text-green-500 ml-1 inline" />;
   };
 
-  const PAGE_SIZE = 50;
-  const paginatedTransactions = transactions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  // Since we are using server-side pagination to save Supabase egress,
+  // the transactions array is already filtered and paginated for the current page.
+  const paginatedTransactions = transactions;
 
   return (
     <div className="flex flex-col">
