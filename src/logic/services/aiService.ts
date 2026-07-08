@@ -3,8 +3,9 @@ import { GoogleGenAI } from "@google/genai";
 let currentKeyIndex = 1;
 
 function getNextGeminiKey(): string {
-  // Check keys from 1 to 5
+  // Check keys from default and 1 to 5
   const keys = [
+    process.env.GEMINI_API_KEY,
     process.env.GEMINI_API_KEY_1,
     process.env.GEMINI_API_KEY_2,
     process.env.GEMINI_API_KEY_3,
@@ -13,7 +14,7 @@ function getNextGeminiKey(): string {
   ].filter(Boolean) as string[];
 
   if (keys.length === 0) {
-    throw new Error("No GEMINI_API_KEY_* found in environment variables");
+    throw new Error("No GEMINI_API_KEY found in environment variables");
   }
 
   // Round robin rotation
@@ -56,7 +57,7 @@ export async function analyzeReceipt(base64Image: string, context: { categories:
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash-latest',
     contents: [
       {
         role: "user",
