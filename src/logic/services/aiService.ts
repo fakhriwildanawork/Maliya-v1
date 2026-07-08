@@ -1,9 +1,10 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+import Groq from "groq-sdk";
+import { createWorker } from "tesseract.js";
 
 let currentKeyIndex = 1;
 
 function getNextGeminiKey(): string {
-  // Check keys from default and 1 to 5
   const keys = [
     process.env.GEMINI_API_KEY,
     process.env.GEMINI_API_KEY_1,
@@ -17,31 +18,61 @@ function getNextGeminiKey(): string {
     throw new Error("No GEMINI_API_KEY found in environment variables");
   }
 
-  // Round robin rotation
   const key = keys[(currentKeyIndex - 1) % keys.length];
   currentKeyIndex++;
   return key;
 }
 
-export async function analyzeReceiptStream(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
-  const apiKey = getNextGeminiKey();
-  const ai = new GoogleGenAI({ apiKey });
+const receiptSchema = {
+  type: Type.OBJECT,
+  properties: {
+    date: { type: Type.STRING, description: "Transaction date in YYYY-MM-DD format" },
+    amount: { type: Type.NUMBER, description: "Total transaction amount" },
+    title: { type: Type.STRING, description: "Short title or merchant name" },
+    description: { type: Type.STRING, description: "Brief list of items or summary" },
+    type: { type: Type.STRING, enum: ["income", "expense"], description: "Type of transaction" },
+    category_name: { type: Type.STRING, description: "Best matching category from context" },
+    account_name: { type: Type.STRING, description: "Best matching account from context" },
+    family_member_name: { type: Type.STRING, description: "Best matching family member from context" },
+  },
+  required: ["date", "amount", "title", "type", "category_name", "account_name", "family_member_name"],
+};
 
-  const systemInstruction = `
+async function performOCR(base64Image: string): Promise<string> {
+  try {
+    // Tesseract.js in Node
+    const worker = await createWorker('ind+eng');
+    const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const { data: { text } } = await worker.recognize(buffer);
+    await worker.terminate();
+    return text;
+  } catch (error) {
+    console.error("OCR Error:", error);
+    return "";
+  }
+}
+
+async function fallbackWithGroq(ocrText: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is not configured for fallback");
+  }
+
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  
+  const systemPrompt = `
     You are a professional financial assistant for "Maliya" - a Personal Finance OS.
-    Your task is to analyze a receipt image and extract transaction data.
+    Extract transaction data from the provided OCR text.
     
     CONTEXT:
-    - Available Categories: ${context.categories.join(", ")}
-    - Available Accounts: ${context.accounts.join(", ")}
-    - Available Family Members: ${context.familyMembers.join(", ")}
+    - Categories: ${context.categories.join(", ")}
+    - Accounts: ${context.accounts.join(", ")}
+    - Family Members: ${context.familyMembers.join(", ")}
     
     RULES:
-    1. Extract: date (YYYY-MM-DD), amount (number), title (short string, e.g., Store Name or Main Item), description (long string, e.g., list of all purchased items), type (income/expense), category_name (matching context), account_name (matching context), family_member_name (matching context).
-    2. CURRENCY HANDLING (IMPORTANT): Indonesian receipts often use dots as thousand separators (e.g., 70.000). If you see a dot, analyze if it's likely a thousand separator or a decimal. In IDR context, 70.000 is 70000.
-    3. OCR NOISE: Receipts can be messy. Use your reasoning to find the Total/Grand Total. If a number looks like it's missing trailing zeros (e.g., "70" instead of "70.000"), try to infer from context or other numbers in the list.
-    4. Map category, account, and family member names to the provided lists as accurately as possible.
-    5. Return ONLY a valid JSON object. No extra text.
+    1. Extract: date (YYYY-MM-DD), amount (number), title (merchant name), description (items), type (income/expense), category_name (map to context), account_name (map to context), family_member_name (map to context).
+    2. CURRENCY: Indonesian receipts use dots for thousands. 70.000 is 70000.
+    3. Return ONLY valid JSON.
     
     JSON STRUCTURE:
     {
@@ -55,95 +86,106 @@ export async function analyzeReceiptStream(base64Image: string, context: { categ
       "family_member_name": "..."
     }
   `;
+
+  const completion = await groq.chat.completions.create({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Extract from this OCR text: ${ocrText}` }
+    ],
+    model: "llama-3.3-70b-versatile",
+    temperature: 0,
+    response_format: { type: "json_object" }
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) throw new Error("Groq returned empty response");
+  return JSON.parse(content);
+}
+
+export async function analyzeReceipt(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+  const apiKey = getNextGeminiKey();
+  const ai = new GoogleGenAI({
+    apiKey,
+    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+  });
 
   const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
   const mimeTypeMatch = base64Image.match(/^data:(image\/(png|jpeg|jpg|webp));base64,/);
   const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
 
-  const responseStream = await ai.models.generateContentStream({
-    model: 'gemini-flash-latest',
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: systemInstruction },
-          { text: "Analyze this receipt and return JSON as specified." },
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data,
-            }
-          }
-        ],
-      }
-    ],
-    config: {
-      temperature: 0,
-      responseMimeType: "application/json",
-    }
-  });
-
-  return responseStream;
-}
-
-export async function analyzeReceipt(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
-  const apiKey = getNextGeminiKey();
-  const ai = new GoogleGenAI({ apiKey });
-
   const systemInstruction = `
-    You are a professional financial assistant for "Maliya" - a Personal Finance OS.
-    Your task is to analyze a receipt image and extract transaction data.
-    
+    Analyze this receipt image for Maliya Finance OS.
     CONTEXT:
-    - Available Categories: ${context.categories.join(", ")}
-    - Available Accounts: ${context.accounts.join(", ")}
-    - Available Family Members: ${context.familyMembers.join(", ")}
+    - Categories: ${context.categories.join(", ")}
+    - Accounts: ${context.accounts.join(", ")}
+    - Family Members: ${context.familyMembers.join(", ")}
     
-    RULES:
-    1. Extract: date (YYYY-MM-DD), amount (number), title (short string, e.g., Store Name or Main Item), description (long string, e.g., list of all purchased items), type (income/expense), category_name (matching context), account_name (matching context), family_member_name (matching context).
-    2. CURRENCY HANDLING (IMPORTANT): Indonesian receipts often use dots as thousand separators (e.g., 70.000). If you see a dot, analyze if it's likely a thousand separator or a decimal. In IDR context, 70.000 is 70000.
-    3. OCR NOISE: Receipts can be messy. Use your reasoning to find the Total/Grand Total. If a number looks like it's missing trailing zeros (e.g., "70" instead of "70.000"), try to infer from context or other numbers in the list.
-    4. Map category, account, and family member names to the provided lists as accurately as possible.
-    5. Return ONLY a valid JSON object. No extra text.
-    
-    JSON STRUCTURE:
-    {
-      "date": "YYYY-MM-DD",
-      "amount": 0,
-      "title": "...",
-      "description": "...",
-      "type": "expense",
-      "category_name": "...",
-      "account_name": "...",
-      "family_member_name": "..."
-    }
+    Map values strictly to the provided context.
   `;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-flash-latest',
-    contents: [
-      {
-        role: "user",
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-flash-latest",
+      contents: {
         parts: [
           { text: systemInstruction },
-          { text: "Analyze this receipt and return JSON as specified." },
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: base64Image,
-            }
-          }
-        ],
+          { inlineData: { mimeType, data: base64Data } }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: receiptSchema,
+        temperature: 0,
       }
-    ],
-    config: {
-      temperature: 0,
-      responseMimeType: "application/json",
+    });
+
+    const content = response.text;
+    if (!content) throw new Error("Gemini returned empty response");
+    return JSON.parse(content);
+  } catch (error: any) {
+    console.error("Gemini Analysis Error:", error);
+    
+    if (error.status === 503 || error.message?.includes("503") || error.message?.includes("high demand")) {
+      console.log("Gemini high demand, falling back to OCR + Groq...");
+      const ocrText = await performOCR(base64Image);
+      if (!ocrText) throw new Error("Fallback failed: OCR text extraction failed.");
+      return await fallbackWithGroq(ocrText, context);
     }
+    
+    throw error;
+  }
+}
+
+export async function analyzeReceiptStream(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+  const apiKey = getNextGeminiKey();
+  const ai = new GoogleGenAI({
+    apiKey,
+    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
   });
 
-  const content = response.text;
-  if (!content) throw new Error("AI returned empty response");
+  const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+  const mimeTypeMatch = base64Image.match(/^data:(image\/(png|jpeg|jpg|webp));base64,/);
+  const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
 
-  return JSON.parse(content);
+  const systemInstruction = `
+    Analyze receipt. Return valid JSON only.
+    CONTEXT:
+    - Categories: ${context.categories.join(", ")}
+    - Accounts: ${context.accounts.join(", ")}
+    - Family Members: ${context.familyMembers.join(", ")}
+  `;
+
+  return await ai.models.generateContentStream({
+    model: "gemini-flash-latest",
+    contents: {
+      parts: [
+        { text: systemInstruction },
+        { inlineData: { mimeType, data: base64Data } }
+      ]
+    },
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0,
+    }
+  });
 }

@@ -33,18 +33,35 @@ app.use(express.json({ limit: '50mb' }));
       const { image, context } = req.body;
       if (!image) return res.status(400).json({ error: "Image is required" });
       
-      const stream = await analyzeReceiptStream(image, context);
-      
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      
-      for await (const chunk of stream) {
-        if (chunk.text) {
-          res.write(chunk.text);
+      try {
+        const stream = await analyzeReceiptStream(image, context);
+        
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        let fullText = '';
+        for await (const chunk of stream) {
+          const text = chunk.text;
+          if (text) {
+            fullText += text;
+            res.write(text);
+          }
+        }
+        res.end();
+      } catch (streamError: any) {
+        console.error("Stream failed, trying non-stream fallback:", streamError);
+        // If stream fails (e.g. 503), try the robust non-stream version with Groq fallback
+        const result = await analyzeReceipt(image, context);
+        if (!res.headersSent) {
+          res.json(result);
+        } else {
+          // If we already started streaming but failed mid-way, we might be in trouble
+          // but usually 503 happens before headers for the stream start.
+          res.write(JSON.stringify(result));
+          res.end();
         }
       }
-      res.end();
     } catch (error: any) {
       console.error("AI Analysis Error:", error);
       if (!res.headersSent) {
