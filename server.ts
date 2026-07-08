@@ -19,7 +19,7 @@ const s3Client = new S3Client({
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-import { analyzeReceipt, analyzeReceiptStream } from "./src/logic/services/aiService";
+import { analyzeReceipt, analyzeReceiptStream } from "./src/logic/services/aiService.js";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
