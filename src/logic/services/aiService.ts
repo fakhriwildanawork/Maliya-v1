@@ -61,7 +61,7 @@ export async function analyzeReceiptStream(base64Image: string, context: { categ
   const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
 
   const responseStream = await ai.models.generateContentStream({
-    model: 'gemini-3.0-flash',
+    model: 'gemini-1.5-flash',
     contents: [
       {
         role: "user",
