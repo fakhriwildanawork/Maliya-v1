@@ -146,7 +146,19 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         throw new Error(errorMessage);
       }
       
-      const data = await response.json();
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let resultText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        resultText += decoder.decode(value, { stream: true });
+      }
+      
+      const data = JSON.parse(resultText);
       
       // Map back to form
       const updates: any = {};

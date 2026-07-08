@@ -19,7 +19,7 @@ const s3Client = new S3Client({
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-import { analyzeReceipt } from "./src/logic/services/aiService";
+import { analyzeReceipt, analyzeReceiptStream } from "./src/logic/services/aiService";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -33,11 +33,25 @@ app.use(express.json({ limit: '50mb' }));
       const { image, context } = req.body;
       if (!image) return res.status(400).json({ error: "Image is required" });
       
-      const result = await analyzeReceipt(image, context);
-      res.json(result);
+      const stream = await analyzeReceiptStream(image, context);
+      
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      
+      for await (const chunk of stream) {
+        if (chunk.text) {
+          res.write(chunk.text);
+        }
+      }
+      res.end();
     } catch (error: any) {
       console.error("AI Analysis Error:", error);
-      res.status(500).json({ error: error.message || "Failed to analyze receipt" });
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message || "Failed to analyze receipt" });
+      } else {
+        res.end();
+      }
     }
   });
 
