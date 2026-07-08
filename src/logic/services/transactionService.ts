@@ -86,6 +86,8 @@ export const transactionService = {
       sourceAccountId: item.source_account_id,
       destinationAccountId: item.destination_account_id,
       linkedDebtId: item.linked_debt_id,
+      expensePlanId: item.expense_plan_id,
+      incomePlanId: item.income_plan_id,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
       createdBy: item.created_by,
@@ -123,6 +125,8 @@ export const transactionService = {
       sourceAccountId: item.source_account_id,
       destinationAccountId: item.destination_account_id,
       linkedDebtId: item.linked_debt_id,
+      expensePlanId: item.expense_plan_id,
+      incomePlanId: item.income_plan_id,
     })) as Transaction[];
   },
 
@@ -143,6 +147,8 @@ export const transactionService = {
       source_account_id: transaction.sourceAccountId,
       destination_account_id: transaction.destinationAccountId,
       linked_debt_id: transaction.linkedDebtId,
+      expense_plan_id: transaction.expensePlanId,
+      income_plan_id: transaction.incomePlanId,
       created_by: transaction.createdBy,
       updated_by: transaction.updatedBy
     };
@@ -202,6 +208,8 @@ export const transactionService = {
     if (transaction.sourceAccountId !== undefined) dbPayload.source_account_id = transaction.sourceAccountId;
     if (transaction.destinationAccountId !== undefined) dbPayload.destination_account_id = transaction.destinationAccountId;
     if (transaction.linkedDebtId !== undefined) dbPayload.linked_debt_id = transaction.linkedDebtId;
+    if (transaction.expensePlanId !== undefined) dbPayload.expense_plan_id = transaction.expensePlanId;
+    if (transaction.incomePlanId !== undefined) dbPayload.income_plan_id = transaction.incomePlanId;
     if (transaction.updatedBy !== undefined) dbPayload.updated_by = transaction.updatedBy;
 
     const { data, error } = await supabase

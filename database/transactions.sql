@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     source_account_id UUID,
     destination_account_id UUID,
     linked_debt_id UUID,
+    expense_plan_id UUID,
+    income_plan_id UUID,
     
     -- Audit Trail
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

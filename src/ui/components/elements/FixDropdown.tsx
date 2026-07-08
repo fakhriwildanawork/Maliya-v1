@@ -13,9 +13,10 @@ interface FixDropdownProps {
   onChange: (value: string) => void;
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
-export default function FixDropdown({ options, value, onChange, className, placeholder }: FixDropdownProps) {
+export default function FixDropdown({ options, value, onChange, className, placeholder, disabled }: FixDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
@@ -51,6 +52,7 @@ export default function FixDropdown({ options, value, onChange, className, place
   }, [focusedIndex, isOpen]);
 
   const toggleDropdown = () => {
+    if (disabled) return;
     if (!isOpen) {
       openDropdown();
     } else {
@@ -59,6 +61,7 @@ export default function FixDropdown({ options, value, onChange, className, place
   };
 
   const openDropdown = () => {
+    if (disabled) return;
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
@@ -75,6 +78,7 @@ export default function FixDropdown({ options, value, onChange, className, place
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
     if (!isOpen) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
@@ -118,9 +122,11 @@ export default function FixDropdown({ options, value, onChange, className, place
     >
       <button
         type="button"
+        disabled={disabled}
         className={cn(
-          "w-full min-h-[44px] flex items-center justify-between px-4 py-2.5 bg-white border rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-green-500",
-          isOpen ? "border-green-500 ring-2 ring-green-500 ring-opacity-20" : "border-gray-200"
+          "w-full min-h-[44px] flex items-center justify-between px-4 py-2.5 border rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-green-500",
+          disabled ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed opacity-70" : "bg-white border-gray-200",
+          isOpen && !disabled ? "border-green-500 ring-2 ring-green-500 ring-opacity-20" : ""
         )}
         onClick={toggleDropdown}
         aria-haspopup="listbox"

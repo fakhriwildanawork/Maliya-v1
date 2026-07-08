@@ -9,9 +9,15 @@ export function useBudgets() {
     addBudget, 
     updateBudget, 
     deleteBudget, 
+    addExpensePlan,
+    updateExpensePlan,
+    deleteExpensePlan,
     addRevenuePlan, 
     updateRevenuePlan, 
-    deleteRevenuePlan 
+    deleteRevenuePlan,
+    addIncomePlan,
+    updateIncomePlan,
+    deleteIncomePlan
   } = useFinance();
 
   return {
@@ -22,8 +28,14 @@ export function useBudgets() {
     addBudget,
     updateBudget: (id: string, updates: any) => updateBudget({ ...updates, id } as any),
     deleteBudget,
+    addExpensePlan,
+    updateExpensePlan: (id: string, updates: any) => updateExpensePlan({ ...updates, id } as any),
+    deleteExpensePlan,
     addRevenuePlan,
     updateRevenuePlan: (id: string, updates: any) => updateRevenuePlan({ ...updates, id } as any),
-    deleteRevenuePlan
+    deleteRevenuePlan,
+    addIncomePlan,
+    updateIncomePlan: (id: string, updates: any) => updateIncomePlan({ ...updates, id } as any),
+    deleteIncomePlan
   };
 }

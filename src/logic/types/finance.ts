@@ -21,6 +21,8 @@ export interface Activity {
   sourceAccountId?: string;
   destinationAccountId?: string;
   linkedDebtId?: string;
+  expensePlanId?: string;
+  incomePlanId?: string;
 }
 
 export interface ChartDataPoint {

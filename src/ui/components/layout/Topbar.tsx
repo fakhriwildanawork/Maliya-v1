@@ -1,7 +1,8 @@
-import { Bell, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import React from 'react';
 import { cn } from '../../../logic/utils/classNames';
 import { useNavigation } from '../../../logic/context/NavigationContext';
+import { MALIYA_LOGO_URL } from '../../../assets';
 
 interface TopbarProps {
   onToggleSidebar?: () => void;
@@ -47,9 +48,13 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
 
       {/* Right side icons */}
       <div className="flex items-center gap-4">
-        <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-gray-50"></span>
+        <button className="p-1 hover:bg-gray-100 rounded-full transition-colors relative">
+          <img
+            src={MALIYA_LOGO_URL}
+            alt="Maliya Logo"
+            className="w-8 h-8 rounded-full object-cover"
+            referrerPolicy="no-referrer"
+          />
         </button>
       </div>
     </header>

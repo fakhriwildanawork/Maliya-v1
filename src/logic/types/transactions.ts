@@ -13,6 +13,8 @@ export interface Transaction {
   sourceAccountId?: string;
   destinationAccountId?: string;
   linkedDebtId?: string;
+  expensePlanId?: string;
+  incomePlanId?: string;
 
   // Audit trail
   createdAt?: string;

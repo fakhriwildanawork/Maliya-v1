@@ -54,13 +54,21 @@ interface FinanceContextType {
   updateCard: (card: CreditCard) => Promise<void>;
   deleteCard: (id: string) => Promise<void>;
   
-  addBudget: (budget: Partial<Budget>) => Promise<void>;
+  addBudget: (budget: Partial<Budget>) => Promise<Budget>;
   updateBudget: (budget: Budget) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
   
-  addRevenuePlan: (plan: Partial<RevenuePlan>) => Promise<void>;
+  addExpensePlan: (plan: Partial<any>) => Promise<any>;
+  updateExpensePlan: (plan: any) => Promise<void>;
+  deleteExpensePlan: (id: string) => Promise<void>;
+  
+  addRevenuePlan: (plan: Partial<RevenuePlan>) => Promise<any>;
   updateRevenuePlan: (plan: RevenuePlan) => Promise<void>;
   deleteRevenuePlan: (id: string) => Promise<void>;
+  
+  addIncomePlan: (plan: Partial<any>) => Promise<any>;
+  updateIncomePlan: (plan: any) => Promise<void>;
+  deleteIncomePlan: (id: string) => Promise<void>;
   
   addGoal: (goal: Partial<Goal>) => Promise<void>;
   updateGoal: (goal: Goal) => Promise<void>;
@@ -266,8 +274,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const addBudget = async (data: Partial<Budget>) => {
-    await BudgetService.createBudget(data as any);
+    const res = await BudgetService.createBudget(data as any);
     fetchBudgets();
+    return res;
   };
 
   const updateBudget = async (budget: Budget) => {
@@ -280,9 +289,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     fetchBudgets();
   };
 
-  const addRevenuePlan = async (data: Partial<RevenuePlan>) => {
-    await BudgetService.createRevenuePlan(data as any);
+  const addExpensePlan = async (data: Partial<any>) => {
+    const res = await BudgetService.createExpensePlan(data as any);
     fetchBudgets();
+    return res;
+  };
+
+  const updateExpensePlan = async (plan: any) => {
+    await BudgetService.updateExpensePlan(plan.id, plan);
+    fetchBudgets();
+  };
+
+  const deleteExpensePlan = async (id: string) => {
+    await BudgetService.deleteExpensePlan(id);
+    fetchBudgets();
+  };
+
+  const addRevenuePlan = async (data: Partial<RevenuePlan>) => {
+    const res = await BudgetService.createRevenuePlan(data as any);
+    fetchBudgets();
+    return res;
   };
 
   const updateRevenuePlan = async (plan: RevenuePlan) => {
@@ -292,6 +318,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const deleteRevenuePlan = async (id: string) => {
     await BudgetService.deleteRevenuePlan(id);
+    fetchBudgets();
+  };
+
+  const addIncomePlan = async (data: Partial<any>) => {
+    const res = await BudgetService.createIncomePlan(data as any);
+    fetchBudgets();
+    return res;
+  };
+
+  const updateIncomePlan = async (plan: any) => {
+    await BudgetService.updateIncomePlan(plan.id, plan);
+    fetchBudgets();
+  };
+
+  const deleteIncomePlan = async (id: string) => {
+    await BudgetService.deleteIncomePlan(id);
     fetchBudgets();
   };
 
@@ -436,9 +478,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       addBudget,
       updateBudget,
       deleteBudget,
+      addExpensePlan,
+      updateExpensePlan,
+      deleteExpensePlan,
       addRevenuePlan,
       updateRevenuePlan,
       deleteRevenuePlan,
+      addIncomePlan,
+      updateIncomePlan,
+      deleteIncomePlan,
       addGoal,
       updateGoal,
       deleteGoal,

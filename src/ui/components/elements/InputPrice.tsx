@@ -7,9 +7,10 @@ interface InputPriceProps {
   onChange: (name: string, value: number) => void;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
-export default function InputPrice({ name, value, onChange, placeholder = '0.00', required }: InputPriceProps) {
+export default function InputPrice({ name, value, onChange, placeholder = '0.00', required, disabled }: InputPriceProps) {
   const [displayValue, setDisplayValue] = useState('');
 
   useEffect(() => {
@@ -65,9 +66,11 @@ export default function InputPrice({ name, value, onChange, placeholder = '0.00'
         onChange={handleChange}
         placeholder={placeholder}
         required={required}
+        disabled={disabled}
         className={cn(
           "w-full pl-11 pr-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base lg:text-sm",
-          "focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+          "focus:outline-none focus:ring-2 focus:ring-green-500",
+          disabled ? "bg-gray-100 opacity-70 cursor-not-allowed text-gray-500" : "bg-white"
         )}
       />
     </div>

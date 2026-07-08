@@ -22,6 +22,7 @@ export default function Budgets() {
     deleteBudget, 
     addActivity,
     fetchBudgets,
+    addExpensePlan,
   } = useFinance();
   
   useEffect(() => {
@@ -188,7 +189,7 @@ export default function Budgets() {
           
           return { targetMonth: m, targetYear: y };
         }
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed && result.value) {
           const { targetMonth, targetYear } = result.value;
           
@@ -199,16 +200,32 @@ export default function Budgets() {
             return;
           }
 
-          addBudget({
-            category: budgetToDuplicate.category,
-            limit: budgetToDuplicate.limit,
-            spent: 0,
-            month: targetMonth,
-            year: targetYear,
-            status: 'On Track'
-          });
-          
-          Swal.default.fire('Duplicated!', `${budgetToDuplicate.category} budget copied to ${months[targetMonth - 1]} ${targetYear}.`, 'success');
+          try {
+            const newBudget = await addBudget({
+              category: budgetToDuplicate.category,
+              limit: budgetToDuplicate.limit,
+              spent: 0,
+              month: targetMonth,
+              year: targetYear,
+              status: 'On Track'
+            });
+
+            if (budgetToDuplicate.expensePlans && budgetToDuplicate.expensePlans.length > 0) {
+              for (const plan of budgetToDuplicate.expensePlans) {
+                await addExpensePlan({
+                  budgetId: newBudget.id,
+                  name: plan.name,
+                  estimatedAmount: plan.estimatedAmount,
+                  isCompleted: false
+                });
+              }
+            }
+            
+            Swal.default.fire('Duplicated!', `${budgetToDuplicate.category} budget copied to ${months[targetMonth - 1]} ${targetYear}.`, 'success');
+          } catch (err) {
+            console.error("Error duplicating budget:", err);
+            Swal.default.fire('Error', 'Failed to duplicate budget or its plans.', 'error');
+          }
         }
       });
     });
@@ -345,6 +362,7 @@ export default function Budgets() {
         <TransactionForm 
           initialData={quickRecordData as Activity}
           fixedType="expense"
+          prefilledCategory={quickRecordData?.category}
           onSubmit={handleTransactionSubmit}
           onCancel={() => setIsTransactionFormOpen(false)}
         />

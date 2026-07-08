@@ -1,3 +1,15 @@
+export interface ExpensePlan {
+  id: string;
+  budgetId: string;
+  name: string;
+  estimatedAmount: number;
+  isCompleted: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type ExpensePlanInsert = Omit<ExpensePlan, 'id' | 'createdAt' | 'updatedAt'>;
+
 export interface Budget {
   id: string;
   category: string;
@@ -6,6 +18,7 @@ export interface Budget {
   month: number; // 1-12
   year: number;
   status: 'On Track' | 'Warning' | 'Exceeded';
+  expensePlans?: ExpensePlan[];
   
   // Audit trail
   createdAt?: string;
@@ -22,6 +35,7 @@ export interface RevenuePlan {
   month: number; // 1-12
   year: number;
   status: 'On Track' | 'Behind' | 'Exceeded';
+  incomePlans?: IncomePlan[];
   
   // Audit trail
   createdAt?: string;
@@ -29,4 +43,16 @@ export interface RevenuePlan {
 }
 
 export type RevenuePlanInsert = Omit<RevenuePlan, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface IncomePlan {
+  id: string;
+  revenuePlanId: string;
+  name: string;
+  estimatedAmount: number;
+  isCompleted: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type IncomePlanInsert = Omit<IncomePlan, 'id' | 'createdAt' | 'updatedAt'>;
 

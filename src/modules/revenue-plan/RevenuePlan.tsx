@@ -9,6 +9,8 @@ import { RevenuePlanForm } from './components/RevenuePlanForm';
 import TransactionForm from '../transactions/components/TransactionForm';
 import Modal from '../../ui/components/common/Modal';
 import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
+import * as TOKENS from '../../ui/styles/tokens';
+import { cn } from '../../logic/utils/classNames';
 
 export default function RevenuePlan() {
   const { 
@@ -78,15 +80,17 @@ export default function RevenuePlan() {
     if (data.type === 'income') {
       try {
         await addActivity({
-          orderId: `#${Math.floor(Math.random() * 100000)}`,
+          orderId: data.orderId || `#${Math.floor(Math.random() * 100000)}`,
           title: data.title || 'Log Income',
           category: data.category || 'Revenue',
           price: data.price || 0,
-          status: 'Completed',
+          status: data.status || 'Completed',
           date: data.date || new Date().toISOString().split('T')[0],
           datetime: data.datetime || new Date().toISOString(),
           type: 'income',
           sourceAccountId: data.sourceAccountId,
+          destinationAccountId: data.destinationAccountId,
+          incomePlanId: data.incomePlanId,
           description: data.description,
         });
 
@@ -185,20 +189,18 @@ export default function RevenuePlan() {
       </div>
 
       {/* Table Section */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className={cn("p-4 sm:p-6 shadow-sm border flex-1 flex flex-col", TOKENS.BG_SURFACE, TOKENS.RADIUS_CARD, TOKENS.BORDER_LIGHT)}>
         <div className="flex justify-between items-center mb-md">
-          <h3 className="text-lg font-semibold text-text-primary">Target Progress</h3>
+          <h3 className={cn("font-semibold text-lg", TOKENS.TEXT_PRIMARY)}>Target Progress</h3>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          <RevenuePlanTable 
-            revenuePlans={revenuePlans}
-            deleteRevenuePlan={deleteRevenuePlan}
-            onEdit={handleEditClick} 
-            onAddIncome={handleAddIncomeClick} 
-            month={currentMonth}
-            year={currentYear}
-          />
-        </div>
+        <RevenuePlanTable 
+          revenuePlans={revenuePlans}
+          deleteRevenuePlan={deleteRevenuePlan}
+          onEdit={handleEditClick} 
+          onAddIncome={handleAddIncomeClick} 
+          month={currentMonth}
+          year={currentYear}
+        />
       </div>
 
       <Modal

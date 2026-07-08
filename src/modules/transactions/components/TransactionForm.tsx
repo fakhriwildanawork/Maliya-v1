@@ -51,6 +51,12 @@ const STATUS_OPTIONS = [
 ];
 
 export default function TransactionForm({ initialData, fixedType, prefilledCategory, readOnly, onSubmit, onCancel }: TransactionFormProps) {
+  const [internalReadOnly, setInternalReadOnly] = useState(!!readOnly);
+  
+  useEffect(() => {
+    setInternalReadOnly(!!readOnly);
+  }, [readOnly]);
+
   const { activities, debts, categories, addCategory } = useFinance();
   const { budgets, revenuePlans } = useBudgets();
   const { currentUser } = useAuth();
@@ -444,7 +450,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           {selectedImage ? (
             <div className="relative w-full aspect-[16/9] max-h-48 overflow-hidden rounded-lg shadow-sm border border-green-200">
               <img src={selectedImage} alt="Receipt Preview" className="w-full h-full object-contain" />
-              {!readOnly && (
+              {!internalReadOnly && (
                 <button 
                   type="button"
                   onClick={() => setSelectedImage(null)}
@@ -462,7 +468,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
             </div>
           )}
           
-          {!readOnly && (
+          {!internalReadOnly && (
             <div className="flex flex-col gap-2 w-full">
               <div className="flex gap-2 w-full">
                 <input 
@@ -510,33 +516,33 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
       <div className="flex p-1 bg-gray-100 rounded-xl gap-1">
         <button
           type="button"
-          disabled={!!fixedType || readOnly}
+          disabled={!!fixedType || internalReadOnly}
           onClick={() => setType('expense')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
             formData.type === 'expense' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-          } ${(fixedType && formData.type !== 'expense') || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(fixedType && formData.type !== 'expense') || internalReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <ArrowUpRight className={`w-4 h-4 ${formData.type === 'expense' ? 'text-red-500' : ''}`} />
           Expense
         </button>
         <button
           type="button"
-          disabled={!!fixedType || readOnly}
+          disabled={!!fixedType || internalReadOnly}
           onClick={() => setType('income')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
             formData.type === 'income' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-          } ${(fixedType && formData.type !== 'income') || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(fixedType && formData.type !== 'income') || internalReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <ArrowDownLeft className={`w-4 h-4 ${formData.type === 'income' ? 'text-green-500' : ''}`} />
           Income
         </button>
         <button
           type="button"
-          disabled={!!fixedType || readOnly}
+          disabled={!!fixedType || internalReadOnly}
           onClick={() => setType('transfer')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
             formData.type === 'transfer' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-          } ${(fixedType && formData.type !== 'transfer') || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(fixedType && formData.type !== 'transfer') || internalReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <ArrowRightLeft className={`w-4 h-4 ${formData.type === 'transfer' ? 'text-blue-500' : ''}`} />
           Transfer
@@ -554,19 +560,110 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         <input
           type="datetime-local"
           name="datetime"
-          disabled={readOnly}
+          disabled={internalReadOnly}
           value={formData.datetime || ''}
           onChange={handleChange}
           className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
         />
       </div>
 
+      {formData.type !== 'transfer' && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-gray-700">Category</label>
+          {isAddingNewCategory ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                disabled={internalReadOnly || !!prefilledCategory}
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Enter new category name..."
+                className="flex-1 px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
+                autoFocus
+              />
+              <button
+                type="button"
+                disabled={internalReadOnly || !!prefilledCategory}
+                onClick={() => {
+                  setIsAddingNewCategory(false);
+                  setNewCategoryName('');
+                  setFormData(prev => ({ ...prev, category: dynamicCategories[0]?.value || '' }));
+                }}
+                className="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-70"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ) : (
+            <FixDropdown
+              options={dynamicCategories}
+              disabled={internalReadOnly || !!prefilledCategory}
+              value={formData.category || (dynamicCategories[0]?.value || '')}
+              onChange={(value) => handleDropdownChange('category', value)}
+            />
+          )}
+        </div>
+      )}
+
+      {(formData.category === 'Debt Repayment' || formData.category === 'Loan Payment Received') && (
+        <div className="flex flex-col gap-1.5 p-4 bg-orange-50 border border-orange-100 rounded-xl">
+          <label className="text-sm font-medium text-orange-800">Select Debt / Loan</label>
+          {debtOptions.length > 0 ? (
+            <FixDropdown
+              options={debtOptions}
+              disabled={internalReadOnly}
+              value={formData.linkedDebtId || ''}
+              onChange={(value) => handleDropdownChange('linkedDebtId', value)}
+              placeholder="Select active debt..."
+            />
+          ) : (
+            <p className="text-sm text-orange-600">No active debts found for this category.</p>
+          )}
+        </div>
+      )}
+
+      {formData.type === 'expense' && formData.category && currentPeriod && budgets.find(b => b.category === formData.category && b.month === currentPeriod.month && b.year === currentPeriod.year)?.expensePlans?.length ? (
+        <div className="flex flex-col gap-1.5 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+          <label className="text-sm font-medium text-blue-800">Select Expenses Plan (Optional)</label>
+          <FixDropdown
+            options={[
+              { value: '', label: '-- No specific plan --' },
+              ...(budgets.find(b => b.category === formData.category && b.month === currentPeriod.month && b.year === currentPeriod.year)?.expensePlans || []).map(p => ({
+                value: p.id,
+                label: `${p.name} (Est: Rp ${p.estimatedAmount.toLocaleString('id-ID')})`
+              }))
+            ]}
+            disabled={internalReadOnly}
+            value={formData.expensePlanId || ''}
+            onChange={(value) => handleDropdownChange('expensePlanId', value)}
+          />
+        </div>
+      ) : null}
+
+      {formData.type === 'income' && formData.category && currentPeriod && revenuePlans.find(rp => rp.category === formData.category && rp.month === currentPeriod.month && rp.year === currentPeriod.year)?.incomePlans?.length ? (
+        <div className="flex flex-col gap-1.5 p-4 bg-green-50 border border-green-100 rounded-xl">
+          <label className="text-sm font-medium text-green-800">Select Income Plan (Optional)</label>
+          <FixDropdown
+            options={[
+              { value: '', label: '-- No specific plan --' },
+              ...(revenuePlans.find(rp => rp.category === formData.category && rp.month === currentPeriod.month && rp.year === currentPeriod.year)?.incomePlans || []).map(p => ({
+                value: p.id,
+                label: `${p.name} (Est: Rp ${p.estimatedAmount.toLocaleString('id-ID')})`
+              }))
+            ]}
+            disabled={internalReadOnly}
+            value={formData.incomePlanId || ''}
+            onChange={(value) => handleDropdownChange('incomePlanId', value)}
+          />
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700">Transaction Title</label>
         <input 
           type="text" 
           name="title"
-          disabled={readOnly}
+          disabled={internalReadOnly}
           value={formData.title || ''}
           onChange={handleChange}
           className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
@@ -581,7 +678,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           name="price"
           value={formData.price || 0}
           onChange={handlePriceChange}
-          disabled={readOnly}
+          disabled={internalReadOnly}
           required
         />
       </div>
@@ -591,7 +688,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           <label className="text-sm font-medium text-gray-700">From Account</label>
           <FixDropdown
             options={sourceAccountOptions}
-            disabled={readOnly}
+            disabled={internalReadOnly}
             value={formData.sourceAccountId || sourceAccountOptions[0]?.value}
             onChange={(value) => handleDropdownChange('sourceAccountId', value)}
           />
@@ -603,65 +700,10 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           <label className="text-sm font-medium text-gray-700">To Account</label>
           <FixDropdown
             options={destinationAccountOptions}
-            disabled={readOnly}
+            disabled={internalReadOnly}
             value={formData.destinationAccountId || destinationAccountOptions[1]?.value || destinationAccountOptions[0]?.value}
             onChange={(value) => handleDropdownChange('destinationAccountId', value)}
           />
-        </div>
-      )}
-
-      {formData.type !== 'transfer' && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">Category</label>
-          {isAddingNewCategory ? (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                disabled={readOnly}
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Enter new category name..."
-                className="flex-1 px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
-                autoFocus
-              />
-              <button
-                type="button"
-                disabled={readOnly}
-                onClick={() => {
-                  setIsAddingNewCategory(false);
-                  setNewCategoryName('');
-                  setFormData(prev => ({ ...prev, category: dynamicCategories[0]?.value || '' }));
-                }}
-                className="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-70"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          ) : (
-            <FixDropdown
-              options={dynamicCategories}
-              disabled={readOnly}
-              value={formData.category || (dynamicCategories[0]?.value || '')}
-              onChange={(value) => handleDropdownChange('category', value)}
-            />
-          )}
-        </div>
-      )}
-
-      {(formData.category === 'Debt Repayment' || formData.category === 'Loan Payment Received') && (
-        <div className="flex flex-col gap-1.5 p-4 bg-orange-50 border border-orange-100 rounded-xl">
-          <label className="text-sm font-medium text-orange-800">Select Debt / Loan</label>
-          {debtOptions.length > 0 ? (
-            <FixDropdown
-              options={debtOptions}
-              disabled={readOnly}
-              value={formData.linkedDebtId || ''}
-              onChange={(value) => handleDropdownChange('linkedDebtId', value)}
-              placeholder="Select active debt..."
-            />
-          ) : (
-            <p className="text-sm text-orange-600">No active debts found for this category.</p>
-          )}
         </div>
       )}
 
@@ -669,7 +711,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         <label className="text-sm font-medium text-gray-700">Status</label>
         <FixDropdown
           options={STATUS_OPTIONS}
-          disabled={readOnly}
+          disabled={internalReadOnly}
           value={formData.status || 'Completed'}
           onChange={(value) => handleDropdownChange('status', value)}
         />
@@ -679,7 +721,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         <label className="text-sm font-medium text-gray-700">Description</label>
         <textarea
           name="description"
-          disabled={readOnly}
+          disabled={internalReadOnly}
           value={formData.description || ''}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
           className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
@@ -688,7 +730,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         />
       </div>
 
-      {!readOnly && (
+      {!internalReadOnly && (
         <div className="hidden flex-col gap-1.5">
           <label className="text-sm font-medium text-gray-700">Attachments</label>
           <input
@@ -712,14 +754,23 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
       )}
 
       <div className="flex gap-3 mt-4">
-        {readOnly ? (
-          <button 
-            type="button" 
-            onClick={onCancel}
-            className="flex-1 px-5 py-2.5 min-h-[44px] rounded-full border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors bg-white"
-          >
-            Close
-          </button>
+        {internalReadOnly ? (
+          <>
+            <button 
+              type="button" 
+              onClick={onCancel}
+              className="flex-1 px-5 py-2.5 min-h-[44px] rounded-full border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors bg-white"
+            >
+              Close
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setInternalReadOnly(false)}
+              className="flex-1 px-5 py-2.5 min-h-[44px] rounded-full font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
+            >
+              Edit
+            </button>
+          </>
         ) : (
           <>
             <button 
