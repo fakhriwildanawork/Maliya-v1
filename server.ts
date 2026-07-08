@@ -25,8 +25,8 @@ import { analyzeReceipt } from "./src/logic/services/aiService";
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 
-async function startServer() {
-  const PORT = 3000;
+ 
+   
 
   // API Route: AI Receipt Analysis
   app.post("/api/ai/analyze-receipt", async (req, res) => {
@@ -160,6 +160,8 @@ async function startServer() {
     }
   });
 
+  async function startServer() {
+  const PORT = 3000;
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
