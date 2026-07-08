@@ -9,6 +9,7 @@ import { ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Camera, Wand2, Loader2, X 
 import { AccountService } from '../../../logic/services/accountService';
 import { Wallet, CreditCard } from '../../../logic/types/accounts';
 import { format } from 'date-fns';
+import Swal from 'sweetalert2';
 import { cn } from '../../../logic/utils/classNames';
 import { 
   BG_PRIMARY,
@@ -21,6 +22,7 @@ interface TransactionFormProps {
   initialData?: Transaction | null;
   fixedType?: 'expense' | 'income' | 'transfer';
   prefilledCategory?: string;
+  readOnly?: boolean;
   onSubmit: (data: Partial<Transaction>) => void;
   onCancel: () => void;
 }
@@ -48,7 +50,7 @@ const STATUS_OPTIONS = [
   { value: 'In Progress', label: 'In Progress' },
 ];
 
-export default function TransactionForm({ initialData, fixedType, prefilledCategory, onSubmit, onCancel }: TransactionFormProps) {
+export default function TransactionForm({ initialData, fixedType, prefilledCategory, readOnly, onSubmit, onCancel }: TransactionFormProps) {
   const { activities, debts, categories, addCategory } = useFinance();
   const { budgets, revenuePlans } = useBudgets();
   const { currentUser } = useAuth();
@@ -100,8 +102,9 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeStatus, setAnalyzeStatus] = useState<string>('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [saveReceipt, setSaveReceipt] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(
+    initialData?.attachments && initialData.attachments.length > 0 ? initialData.attachments[0] : null
+  );
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +113,13 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
+        setFormData(prev => {
+          const newAttachments = prev.attachments ? [...prev.attachments] : [];
+          if (!newAttachments.includes(file.name)) {
+            newAttachments.push(file.name);
+          }
+          return { ...prev, attachments: newAttachments };
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -119,7 +129,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     if (!selectedImage) return;
     
     setIsAnalyzing(true);
-    setAnalyzeStatus('Menganalisa data (AI)...');
+    setAnalyzeStatus('Analyzing data (AI)...');
     try {
       const base64Image = selectedImage.split(',')[1];
       
@@ -187,7 +197,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
 
     } catch (error: any) {
       console.error(error);
-      alert(error.message || 'Gagal menganalisa struk.');
+      alert(error.message || 'Failed to analyze receipt.');
     } finally {
       setIsAnalyzing(false);
       setAnalyzeStatus('');
@@ -377,9 +387,24 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     } else {
       submitData.date = format(new Date(), 'dd MMM, yyyy hh:mm a');
     }
-    if (selectedImage && saveReceipt) {
-      submitData.attachments = [...(submitData.attachments || []), 'Struk_Belanja_AI.jpg'];
+
+    if (formData.attachments && formData.attachments.length > 0) {
+      const result = await Swal.fire({
+        title: 'Save Attachment?',
+        text: "There is an attachment file, do you want to save it?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#EF4444',
+        confirmButtonText: 'Yes, save',
+        cancelButtonText: 'No, ignore'
+      });
+      
+      if (!result.isConfirmed) {
+        submitData.attachments = [];
+      }
     }
+
     onSubmit(submitData);
   };
 
@@ -413,22 +438,13 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <div className="flex justify-between items-center">
-        <h2 className={cn("text-xl font-bold", TEXT_PRIMARY)}>
-          {initialData ? 'Edit Transaksi' : 'Transaksi Baru'}
-        </h2>
-        <button type="button" onClick={onCancel} className={cn("p-2 rounded-full hover:bg-gray-100", TEXT_SECONDARY)}>
-          <X size={20} />
-        </button>
-      </div>
-
       {/* AI Receipt Upload Section */}
-      {!initialData && (
-        <div className={cn("p-4 border-2 border-dashed rounded-xl transition-all", selectedImage ? "border-green-500 bg-green-50" : "border-gray-200 hover:border-green-400")}>
-          <div className="flex flex-col items-center gap-3">
-            {selectedImage ? (
-              <div className="relative w-full aspect-[16/9] max-h-48 overflow-hidden rounded-lg shadow-sm border border-green-200">
-                <img src={selectedImage} alt="Receipt Preview" className="w-full h-full object-contain" />
+      <div className={cn("p-4 border-2 border-dashed rounded-xl transition-all", selectedImage ? "border-green-500 bg-green-50" : "border-gray-200 hover:border-green-400")}>
+        <div className="flex flex-col items-center gap-3">
+          {selectedImage ? (
+            <div className="relative w-full aspect-[16/9] max-h-48 overflow-hidden rounded-lg shadow-sm border border-green-200">
+              <img src={selectedImage} alt="Receipt Preview" className="w-full h-full object-contain" />
+              {!readOnly && (
                 <button 
                   type="button"
                   onClick={() => setSelectedImage(null)}
@@ -436,15 +452,17 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
                 >
                   <X size={14} />
                 </button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center py-2">
-                <Camera size={32} className="text-gray-400 mb-2" />
-                <p className="text-sm text-gray-500 text-center font-medium">Foto Struk untuk Isi Otomatis</p>
-                <p className="text-[10px] text-gray-400 text-center">Analisa AI (Powered by Gemini)</p>
-              </div>
-            )}
-            
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center py-2">
+              <Camera size={32} className="text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500 text-center font-medium">Receipt Photo for Autofill</p>
+              <p className="text-[10px] text-gray-400 text-center">AI Analysis (Powered by Gemini)</p>
+            </div>
+          )}
+          
+          {!readOnly && (
             <div className="flex flex-col gap-2 w-full">
               <div className="flex gap-2 w-full">
                 <input 
@@ -461,7 +479,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
                     selectedImage ? "bg-white border border-green-200 text-green-700 hover:bg-green-100" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   )}
                 >
-                  {selectedImage ? 'Ganti Foto' : 'Pilih Foto'}
+                  {selectedImage ? 'Change Photo' : 'Select Photo'}
                 </button>
                 
                 {selectedImage && (
@@ -478,59 +496,47 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
                     ) : (
                       <Wand2 size={16} />
                     )}
-                    {isAnalyzing ? analyzeStatus : 'Analisa AI'}
+                    {isAnalyzing ? analyzeStatus : 'AI Analysis'}
                   </button>
                 )}
               </div>
-              
-              {selectedImage && (
-                <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer pt-1">
-                  <input 
-                    type="checkbox" 
-                    checked={saveReceipt}
-                    onChange={(e) => setSaveReceipt(e.target.checked)}
-                    className="rounded border-gray-300 text-green-600 focus:ring-green-500 w-4 h-4"
-                  />
-                  Simpan foto struk sebagai lampiran
-                </label>
-              )}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
       {/* Transaction Type Tabs */}
       <div className="flex p-1 bg-gray-100 rounded-xl gap-1">
         <button
           type="button"
-          disabled={!!fixedType}
+          disabled={!!fixedType || readOnly}
           onClick={() => setType('expense')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
             formData.type === 'expense' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-          } ${fixedType && formData.type !== 'expense' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(fixedType && formData.type !== 'expense') || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <ArrowUpRight className={`w-4 h-4 ${formData.type === 'expense' ? 'text-red-500' : ''}`} />
           Expense
         </button>
         <button
           type="button"
-          disabled={!!fixedType}
+          disabled={!!fixedType || readOnly}
           onClick={() => setType('income')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
             formData.type === 'income' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-          } ${fixedType && formData.type !== 'income' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(fixedType && formData.type !== 'income') || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <ArrowDownLeft className={`w-4 h-4 ${formData.type === 'income' ? 'text-green-500' : ''}`} />
           Income
         </button>
         <button
           type="button"
-          disabled={!!fixedType}
+          disabled={!!fixedType || readOnly}
           onClick={() => setType('transfer')}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
             formData.type === 'transfer' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-          } ${fixedType && formData.type !== 'transfer' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(fixedType && formData.type !== 'transfer') || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <ArrowRightLeft className={`w-4 h-4 ${formData.type === 'transfer' ? 'text-blue-500' : ''}`} />
           Transfer
@@ -548,9 +554,10 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         <input
           type="datetime-local"
           name="datetime"
+          disabled={readOnly}
           value={formData.datetime || ''}
           onChange={handleChange}
-          className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50"
+          className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
         />
       </div>
 
@@ -559,9 +566,10 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         <input 
           type="text" 
           name="title"
+          disabled={readOnly}
           value={formData.title || ''}
           onChange={handleChange}
-          className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50"
+          className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
           placeholder="e.g., Grocery Shopping"
           required
         />
@@ -573,6 +581,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           name="price"
           value={formData.price || 0}
           onChange={handlePriceChange}
+          disabled={readOnly}
           required
         />
       </div>
@@ -582,6 +591,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           <label className="text-sm font-medium text-gray-700">From Account</label>
           <FixDropdown
             options={sourceAccountOptions}
+            disabled={readOnly}
             value={formData.sourceAccountId || sourceAccountOptions[0]?.value}
             onChange={(value) => handleDropdownChange('sourceAccountId', value)}
           />
@@ -593,6 +603,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           <label className="text-sm font-medium text-gray-700">To Account</label>
           <FixDropdown
             options={destinationAccountOptions}
+            disabled={readOnly}
             value={formData.destinationAccountId || destinationAccountOptions[1]?.value || destinationAccountOptions[0]?.value}
             onChange={(value) => handleDropdownChange('destinationAccountId', value)}
           />
@@ -606,20 +617,22 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
             <div className="flex gap-2">
               <input
                 type="text"
+                disabled={readOnly}
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder="Enter new category name..."
-                className="flex-1 px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50"
+                className="flex-1 px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
                 autoFocus
               />
               <button
                 type="button"
+                disabled={readOnly}
                 onClick={() => {
                   setIsAddingNewCategory(false);
                   setNewCategoryName('');
                   setFormData(prev => ({ ...prev, category: dynamicCategories[0]?.value || '' }));
                 }}
-                className="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors"
+                className="px-3 py-2 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-70"
               >
                 <X size={18} />
               </button>
@@ -627,6 +640,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           ) : (
             <FixDropdown
               options={dynamicCategories}
+              disabled={readOnly}
               value={formData.category || (dynamicCategories[0]?.value || '')}
               onChange={(value) => handleDropdownChange('category', value)}
             />
@@ -640,6 +654,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           {debtOptions.length > 0 ? (
             <FixDropdown
               options={debtOptions}
+              disabled={readOnly}
               value={formData.linkedDebtId || ''}
               onChange={(value) => handleDropdownChange('linkedDebtId', value)}
               placeholder="Select active debt..."
@@ -654,6 +669,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         <label className="text-sm font-medium text-gray-700">Status</label>
         <FixDropdown
           options={STATUS_OPTIONS}
+          disabled={readOnly}
           value={formData.status || 'Completed'}
           onChange={(value) => handleDropdownChange('status', value)}
         />
@@ -663,54 +679,69 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         <label className="text-sm font-medium text-gray-700">Description</label>
         <textarea
           name="description"
+          disabled={readOnly}
           value={formData.description || ''}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50"
+          className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 disabled:opacity-70 disabled:bg-gray-100"
           placeholder="Add transaction description..."
           rows={3}
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-gray-700">Attachments</label>
-        <input
-          type="file"
-          multiple
-          onChange={(e) => {
-            const files = e.target.files;
-            if (files) {
-              setFormData(prev => ({
-                ...prev,
-                attachments: Array.from(files).map((f: any) => f.name)
-              }));
-            }
-          }}
-          className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer"
-        />
-        {formData.attachments && formData.attachments.length > 0 && (
-          <p className="text-xs text-gray-500">Selected: {formData.attachments.join(', ')}</p>
-        )}
-      </div>
+      {!readOnly && (
+        <div className="hidden flex-col gap-1.5">
+          <label className="text-sm font-medium text-gray-700">Attachments</label>
+          <input
+            type="file"
+            multiple
+            onChange={(e) => {
+              const files = e.target.files;
+              if (files) {
+                setFormData(prev => ({
+                  ...prev,
+                  attachments: Array.from(files).map((f: any) => f.name)
+                }));
+              }
+            }}
+            className="w-full px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer"
+          />
+          {formData.attachments && formData.attachments.length > 0 && (
+            <p className="text-xs text-gray-500">Selected: {formData.attachments.join(', ')}</p>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-3 mt-4">
-        <button 
-          type="button" 
-          onClick={onCancel}
-          className="flex-1 px-5 py-2.5 min-h-[44px] rounded-full border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-        >
-          Cancel
-        </button>
-        <button 
-          type="submit" 
-          disabled={isInvalidTransfer}
-          className={`flex-1 px-5 py-2.5 min-h-[44px] rounded-full font-medium transition-colors ${
-            isInvalidTransfer 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-              : 'bg-green-500 text-white hover:bg-green-600'
-          }`}
-        >
-          {initialData ? 'Save' : 'Add'}
-        </button>
+        {readOnly ? (
+          <button 
+            type="button" 
+            onClick={onCancel}
+            className="flex-1 px-5 py-2.5 min-h-[44px] rounded-full border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors bg-white"
+          >
+            Close
+          </button>
+        ) : (
+          <>
+            <button 
+              type="button" 
+              onClick={onCancel}
+              className="flex-1 px-5 py-2.5 min-h-[44px] rounded-full border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={isInvalidTransfer}
+              className={`flex-1 px-5 py-2.5 min-h-[44px] rounded-full font-medium transition-colors ${
+                isInvalidTransfer 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-green-500 text-white hover:bg-green-600'
+              }`}
+            >
+              {initialData ? 'Save' : 'Add'}
+            </button>
+          </>
+        )}
       </div>
     </form>
   </div>

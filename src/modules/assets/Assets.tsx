@@ -89,7 +89,6 @@ export default function Assets() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Assets & Net Worth</h1>
             <p className="text-sm text-gray-500 mt-1">Track physical assets, integrate your financial portfolio, and monitor your real-time net worth.</p>
           </div>
           <div className="w-full sm:w-auto">

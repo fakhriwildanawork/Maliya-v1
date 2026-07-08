@@ -203,7 +203,6 @@ export default function Transactions() {
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
           <div className="w-full md:w-auto">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight">Transactions</h1>
             <p className="text-gray-500 text-xs md:text-sm mt-1">Manage and view all your financial activities</p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 md:gap-3 w-full md:w-auto">
@@ -298,10 +297,11 @@ export default function Transactions() {
       <Modal 
         isOpen={isFormOpen} 
         onClose={() => setIsFormOpen(false)}
-        title={selectedTransaction ? "Edit Transaction" : "New Transaction"}
+        title={selectedTransaction ? "Transaction Detail" : "New Transaction"}
       >
         <TransactionForm 
-          initialData={selectedTransaction} 
+          initialData={selectedTransaction}
+          readOnly={!!selectedTransaction}
           onSubmit={handleFormSubmit} 
           onCancel={() => setIsFormOpen(false)} 
         />

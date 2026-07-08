@@ -96,7 +96,6 @@ export default function Goals() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-lg">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Saving Goals</h1>
             <p className="text-text-secondary">Track and achieve your financial targets</p>
           </div>
           <div className="w-full sm:w-auto">

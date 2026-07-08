@@ -246,4 +246,47 @@ Setelah kode siap dan diunggah ke repositori Anda (GitHub), selesaikan langkah b
 
 ---
 
-Dengan memahami dan menerapkan pola **Server-Side API Proxying**, konfigurasi routing hibrida melalui **`vercel.json`**, dan teknik **Streaming (Event-Stream)**, aplikasi Anda akan dijamin berjalan dengan lancar tanpa kendala batas performa maupun masalah keamanan di platform Vercel Serverless!
+## 5. Solusi Khusus Error Vercel Serverless (ESM Module Resolution)
+
+Saat men-deploy ke Vercel dengan arsitektur hibrida (Express.js), Anda mungkin akan menemukan error seperti ini pada logs Vercel:
+
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server' imported from /var/task/api/index.js
+code: 'ERR_MODULE_NOT_FOUND',
+url: 'file:///var/task/server'
+```
+
+### Penyebab Akar Masalah (Root Cause)
+Error ini disebabkan oleh sistem resolusi modul (Module Resolution) dari Node.js dalam mode ESM (ECMAScript Modules). Pada mode ESM yang ketat, Node.js mensyaratkan bahwa semua _relative imports_ lokal **harus diakhiri dengan ekstensi `.js`** secara eksplisit pada impornya, **meskipun file aslinya adalah `.ts`**.
+
+Walaupun pada pengembangan lokal (`tsx` atau `ts-node`) ekstensi ini bisa diabaikan, namun Vercel mem-build kode ke JavaScript native ESM, di mana import path `/server` dianggap sebagai sebuah direktori tanpa `index.js`, atau dianggap bukan file JavaScript yang sah tanpa ekstensi.
+
+### Cara Memperbaikinya
+Setiap kali Anda mengimpor module atau file internal proyek ke dalam endpoint API atau `server.ts` (terutama yang akan diekspor sebagai fungsi Vercel di folder `/api/`), pastikan Anda **selalu menambahkan ekstensi `.js` atau ekstensi eksplisit** pada file impor.
+
+**Contoh Salah (Bisa berjalan lokal, gagal di Vercel):**
+```typescript
+// di dalam api/index.ts
+import app from "../server"; 
+
+// di dalam server.ts
+import { analyzeReceipt } from "./src/logic/services/aiService";
+```
+
+**Contoh Benar (Bisa berjalan lokal dan sukses di Vercel):**
+```typescript
+// di dalam api/index.ts
+import app from "../server.js"; 
+
+// di dalam server.ts
+import { analyzeReceipt } from "./src/logic/services/aiService.js";
+```
+
+### Ringkasan Aturan ESM di Vercel
+1. Pada bagian server-side (`/api` atau `server.ts`), impor antar-file `.ts` **harus** ditulis menggunakan ekstensi `.js`.
+2. Jangan menambahkan ekstensi `.js` pada library pihak ketiga (misalnya `import express from "express";`). Ekstensi hanya ditujukan pada file buatan lokal (`./` atau `../`).
+3. Konfigurasi `package.json` Anda kemungkinan menggunakan `"type": "module"`, sehingga aturan impor ESM modern ini diterapkan oleh Vercel.
+
+---
+
+Dengan memahami dan menerapkan pola **Server-Side API Proxying**, konfigurasi routing hibrida melalui **`vercel.json`**, teknik **Streaming (Event-Stream)**, dan resolusi modul **ESM yang ketat**, aplikasi Anda akan dijamin berjalan dengan lancar tanpa kendala batas performa maupun masalah keamanan di platform Vercel Serverless!

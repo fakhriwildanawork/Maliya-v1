@@ -70,7 +70,6 @@ export default function Investments() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Investment Portfolio</h1>
             <p className="text-sm text-gray-500 mt-1 max-w-2xl">Monitor your capital allocation, analyze sector distribution, and track real-time portfolio performance across all asset classes.</p>
           </div>
           <div className="w-full sm:w-auto">

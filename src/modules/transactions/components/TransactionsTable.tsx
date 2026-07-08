@@ -156,20 +156,20 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           Swal.fire({
-                            title: 'Apakah Anda yakin?',
-                            text: 'Transaksi yang dihapus tidak dapat dikembalikan!',
+                            title: 'Are you sure?',
+                            text: 'Deleted transactions cannot be recovered!',
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonColor: '#22c55e',
                             cancelButtonColor: '#ef4444',
-                            confirmButtonText: 'Ya, hapus!',
-                            cancelButtonText: 'Batal'
+                            confirmButtonText: 'Yes, delete it!',
+                            cancelButtonText: 'Cancel'
                           }).then((result) => {
                             if (result.isConfirmed) {
                               onDelete(activity.id);
                               Swal.fire({
-                                title: 'Terhapus!',
-                                text: 'Transaksi telah berhasil dihapus.',
+                                title: 'Deleted!',
+                                text: 'Transaction has been successfully deleted.',
                                 icon: 'success',
                                 confirmButtonColor: '#22c55e'
                               });

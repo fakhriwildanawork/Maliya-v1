@@ -14,8 +14,8 @@ import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 
 const TYPE_OPTIONS = [
   { value: 'all', label: 'All Debts/Loans' },
-  { value: 'payable', label: 'Payable (Hutang)' },
-  { value: 'receivable', label: 'Receivable (Piutang)' },
+  { value: 'payable', label: 'Payable' },
+  { value: 'receivable', label: 'Receivable' },
 ];
 
 export default function Debts() {
@@ -62,11 +62,11 @@ export default function Debts() {
             <div class="flex p-1 bg-gray-100 rounded-xl">
               <label class="flex-1 cursor-pointer">
                 <input type="radio" name="debt_type" value="payable" class="peer sr-only" checked>
-                <div class="text-center py-1.5 px-3 text-sm font-medium rounded-lg text-gray-500 peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm transition-all">Payable (Hutang)</div>
+                <div class="text-center py-1.5 px-3 text-sm font-medium rounded-lg text-gray-500 peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm transition-all">Payable</div>
               </label>
               <label class="flex-1 cursor-pointer">
                 <input type="radio" name="debt_type" value="receivable" class="peer sr-only">
-                <div class="text-center py-1.5 px-3 text-sm font-medium rounded-lg text-gray-500 peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm transition-all">Receivable (Piutang)</div>
+                <div class="text-center py-1.5 px-3 text-sm font-medium rounded-lg text-gray-500 peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm transition-all">Receivable</div>
               </label>
             </div>
           </div>
@@ -204,7 +204,6 @@ export default function Debts() {
       <div className={cn("flex-1 flex flex-col min-h-0 overflow-y-auto", TOKENS.BG_BACKGROUND, TOKENS.PADDING_PAGE)}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className={cn("text-2xl md:text-3xl font-bold", TOKENS.TEXT_PRIMARY)}>Debts & Loans</h1>
           <p className={TOKENS.TEXT_SECONDARY}>Manage your payable and receivable accounts</p>
         </div>
         <div className="w-full sm:w-auto">

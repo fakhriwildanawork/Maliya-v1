@@ -204,7 +204,6 @@ export default function Accounts() {
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
         <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Accounts & Wallets</h1>
             <p className="text-sm md:text-base text-gray-500">Manage your connected accounts, credit cards, and limits.</p>
           </div>
           <PrimaryButton 

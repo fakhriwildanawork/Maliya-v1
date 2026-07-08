@@ -145,7 +145,7 @@ export default function Categories() {
       Swal.fire({
         icon: 'error',
         title: 'Cannot Delete Category',
-        text: `Kategori tidak bisa dihapus karena memiliki ${count} transaksi terkait. Hapus atau pindahkan transaksinya terlebih dahulu.`,
+        text: `Category cannot be deleted because it has ${count} related transactions. Delete or move the transactions first.`,
         confirmButtonColor: '#10b981'
       });
       return;
@@ -244,7 +244,6 @@ export default function Categories() {
         <main className="p-4 md:p-8 flex-1 w-full max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
               <p className="text-gray-500 text-sm mt-1">Manage your transaction categories</p>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">

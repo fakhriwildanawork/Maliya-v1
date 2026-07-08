@@ -144,26 +144,26 @@ export default function AssetTable({ onEdit, filterCategory }: AssetTableProps) 
                           icon={Trash2}
                           onClick={() => {
                             Swal.fire({
-                              title: 'Hapus Aset Fisik?',
-                              text: `Apakah Anda yakin ingin menghapus data aset ${as.name}? Tindakan ini tidak dapat dibatalkan.`,
+                              title: 'Delete Physical Asset?',
+                              text: `Are you sure you want to delete the asset ${as.name}? This action cannot be undone.`,
                               icon: 'warning',
                               showCancelButton: true,
                               confirmButtonColor: '#10B981',
                               cancelButtonColor: '#EF4444',
-                              confirmButtonText: 'Ya, hapus!',
-                              cancelButtonText: 'Batal'
+                              confirmButtonText: 'Yes, delete!',
+                              cancelButtonText: 'Cancel'
                             }).then((result) => {
                               if (result.isConfirmed) {
                                 deleteAsset(as.id).then(() => {
                                   Swal.fire({
-                                    title: 'Berhasil!',
-                                    text: 'Aset telah dihapus.',
+                                    title: 'Success!',
+                                    text: 'Asset has been deleted.',
                                     icon: 'success'
                                   });
                                 }).catch((err) => {
                                   Swal.fire({
-                                    title: 'Gagal!',
-                                    text: err.message || 'Gagal menghapus aset.',
+                                    title: 'Failed!',
+                                    text: err.message || 'Failed to delete asset.',
                                     icon: 'error'
                                   });
                                 });

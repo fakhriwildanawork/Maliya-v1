@@ -225,7 +225,6 @@ export default function Budgets() {
     <div className={cn("flex-1 flex flex-col min-h-0 overflow-y-auto", TOKENS.BG_BACKGROUND, TOKENS.PADDING_PAGE)}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className={cn("text-2xl md:text-3xl font-bold", TOKENS.TEXT_PRIMARY)}>Budgets</h1>
           <p className={TOKENS.TEXT_SECONDARY}>Manage your periodic spending limits</p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
