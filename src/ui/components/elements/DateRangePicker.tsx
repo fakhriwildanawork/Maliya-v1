@@ -157,14 +157,14 @@ export function DateRangePicker({
             />
             
             {/* Bottom Sheet Container */}
-            <div
-              ref={calendarRef}
-              className={cn(
-                "relative z-10 w-full max-h-[90vh] flex flex-col p-4 pb-6 rounded-t-3xl shadow-2xl border-t border-x overflow-y-auto animate-in slide-in-from-bottom duration-200",
-                BG_SURFACE,
-                BORDER_DEFAULT
-              )}
-            >
+<div
+  ref={calendarRef}
+  className={cn(
+    "relative z-10 w-full flex flex-col p-4 pb-6 rounded-t-3xl shadow-2xl border-t border-x animate-in slide-in-from-bottom duration-200", 
+    BG_SURFACE,
+    BORDER_DEFAULT
+  )}
+>
               {/* Drag Handle indicator for Bottom Sheet */}
               <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
               
@@ -202,47 +202,50 @@ export function DateRangePicker({
                 </div>
 
                 <DayPicker
-                  mode="range"
-                  locale={localeId}
-                  selected={internalDate}
-                  onSelect={handleSelect}
-                  month={calendarMonth}
-                  onMonthChange={setCalendarMonth}
-                  numberOfMonths={1}
-                  disabled={{ after: new Date() }}
-                  max={93}
-                  showOutsideDays
-                  className="w-full flex justify-center"
-                  classNames={{
-                    root: "!p-0 w-full max-w-sm", 
-                    months: "flex flex-col w-full",
-                    month: "space-y-4 w-full",
-                    month_caption: "hidden",
-                    nav: "hidden",
-                    month_grid: "w-full mx-auto",
-                    weekdays: "flex w-full mb-2 justify-between",
-                    weekday: cn(TEXT_MUTED, "w-10 font-bold text-xs uppercase flex items-center justify-center"),
-                    weeks: "space-y-1 w-full",
-                    week: "flex w-full justify-between",
-                    day: "h-10 w-10 text-center text-xs p-0 flex items-center justify-center relative focus-within:z-20",
-                    day_button: cn(
-                      "h-10 w-10 p-0 font-medium rounded-full flex items-center justify-center transition-all text-sm",
-                      TEXT_PRIMARY,
-                      "hover:bg-gray-100"
-                    ),
-                    today: "text-green-600 font-bold",
-                    selected: cn(BG_PRIMARY, "text-white font-bold"),
-                    range_start: cn("rounded-l-full", BG_PRIMARY, "text-white"),
-                    range_end: cn("rounded-r-full", BG_PRIMARY, "text-white"),
-                    range_middle: "bg-green-50 !text-green-700 rounded-none",
-                    outside: "text-gray-300 opacity-50",
-                    disabled: "text-gray-200 cursor-not-allowed",
-                    hidden: "invisible",
-                  }}
-                  components={{
-                    Chevron: () => <></>,
-                  }}
-                />
+  mode="range"
+  locale={localeId}
+  selected={internalDate}
+  onSelect={handleSelect}
+  month={calendarMonth}
+  onMonthChange={setCalendarMonth}
+  numberOfMonths={1}
+  disabled={{ after: new Date() }}
+  max={93}
+  showOutsideDays
+  className="w-full flex justify-center" // Biarkan w-full, flex-nya untuk centerkan kalender di container
+  classNames={{
+    root: "!p-0 w-full max-w-[360px]", // TAMBAHKAN MAX-WIDTH AGAR GRID TIDAK MELEBAR TERLALU BESAR DI MOBILE
+    months: "flex flex-col w-full",
+    month: "space-y-4 w-full",
+    month_caption: "hidden",
+    nav: "hidden",
+    month_grid: "w-full mx-auto border-separate border-spacing-y-1", // Biarkan w-full, tambahkan border-spacing agar jarak antar baris rapi
+    // HAPUS "grid grid-cols-7", biarkan default dari react-day-picker
+    weekdays: "flex w-full mb-2", 
+    weekday: cn(TEXT_MUTED, "font-medium text-xs uppercase flex-1 flex items-center justify-center"), // Pakai flex-1 agar rata kanan kiri otomatis
+    weeks: "flex flex-col w-full",
+    // HAPUS "grid grid-cols-7", biarkan default flex-nya react-day-picker
+    week: "flex w-full", 
+    // HAPUS "w-full", pakai aspect-square agar tetap kotak namun tidak memaksa parent melebar
+    day: "aspect-square flex-1 text-center text-xs p-0 flex items-center justify-center relative focus-within:z-20",
+    day_button: cn(
+      "h-full w-full max-w-[44px] max-h-[44px] p-0 font-medium rounded-full flex items-center justify-center transition-all text-sm",
+      TEXT_PRIMARY,
+      "hover:bg-gray-100"
+    ),
+    today: "text-green-600 font-bold",
+    selected: cn(BG_PRIMARY, "text-white font-bold"),
+    range_start: cn("rounded-l-full", BG_PRIMARY, "text-white"),
+    range_end: cn("rounded-r-full", BG_PRIMARY, "text-white"),
+    range_middle: "bg-green-50 !text-green-700 rounded-none",
+    outside: "text-gray-300 opacity-50",
+    disabled: "text-gray-200 cursor-not-allowed",
+    hidden: "invisible",
+  }}
+  components={{
+    Chevron: () => <></>,
+  }}
+/>
               </div>
 
               {/* Preset selection and Action buttons */}
