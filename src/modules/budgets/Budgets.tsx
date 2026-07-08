@@ -21,13 +21,13 @@ export default function Budgets() {
     updateBudget, 
     deleteBudget, 
     addActivity,
-    fetchBudgets,
+    refreshAll,
     addExpensePlan,
   } = useFinance();
   
   useEffect(() => {
-    fetchBudgets();
-  }, [fetchBudgets]);
+    refreshAll();
+  }, [refreshAll]);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useFinance } from '../../logic/context/FinanceContext';
 import { useModuleLoading } from '../../logic/hooks/useModuleLoading';
 import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
@@ -23,8 +23,12 @@ const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 export default function Reports() {
   const loading = useModuleLoading();
   const { isCompact } = useViewport();
-  const { activities, budgets, wallets, cards } = useFinance();
+  const { activities, budgets, wallets, cards, refreshAll } = useFinance();
   const { chartData, totalBalance } = useDashboardData();
+
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 30),
     to: new Date(),

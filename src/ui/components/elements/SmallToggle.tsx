@@ -4,19 +4,22 @@ import { cn } from '../../../logic/utils/classNames';
 interface SmallToggleProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
 }
 
-export default function SmallToggle({ checked, onChange }: SmallToggleProps) {
+export default function SmallToggle({ checked, onChange, disabled }: SmallToggleProps) {
   return (
-    <div className="inline-flex items-center justify-center min-h-[44px] min-w-[44px]">
+    <div className="inline-flex items-center justify-center min-h-[2.75rem] min-w-[2.75rem]">
       <button
         type="button"
         role="switch"
         aria-checked={checked}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
           "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 ease-in-out",
-          checked ? "bg-green-500" : "bg-gray-200"
+          checked ? "bg-green-500" : "bg-gray-200",
+          disabled && "opacity-50 cursor-not-allowed"
         )}
       >
         <span className="sr-only">Toggle status</span>

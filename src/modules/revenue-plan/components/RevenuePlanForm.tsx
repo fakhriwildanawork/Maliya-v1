@@ -16,6 +16,7 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
   const [target, setTarget] = useState(editPlan?.target || 0);
   const [month, setMonth] = useState(editPlan?.month || new Date().getMonth() + 1);
   const [year, setYear] = useState(editPlan?.year || new Date().getFullYear());
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const months = [
     { value: 1, label: 'January' },
@@ -34,25 +35,30 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editPlan) {
-      await updateRevenuePlan(editPlan.id, {
-        category,
-        target,
-        month,
-        year,
-        status: editPlan.achieved >= target ? 'Exceeded' : (editPlan.achieved < target * 0.5 ? 'Behind' : 'On Track')
-      });
-    } else {
-      await addRevenuePlan({
-        category,
-        target,
-        achieved: 0,
-        month,
-        year,
-        status: 'On Track'
-      });
+    setIsSubmitting(true);
+    try {
+      if (editPlan) {
+        await updateRevenuePlan(editPlan.id, {
+          category,
+          target,
+          month,
+          year,
+          status: editPlan.achieved >= target ? 'Exceeded' : (editPlan.achieved < target * 0.5 ? 'Behind' : 'On Track')
+        });
+      } else {
+        await addRevenuePlan({
+          category,
+          target,
+          achieved: 0,
+          month,
+          year,
+          status: 'On Track'
+        });
+      }
+      onClose();
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -63,9 +69,10 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
           type="text"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="px-md py-sm min-h-[44px] rounded-lg border border-border-main text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-light transition-all"
+          className="px-md py-sm min-h-[2.75rem] rounded-lg border border-border-main text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-light transition-all"
           placeholder="e.g. Salary, Freelance, Dividend"
           required
+          disabled={isSubmitting}
         />
       </div>
       
@@ -77,6 +84,7 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
           onChange={(_, val) => setTarget(val)}
           placeholder="0"
           required
+          disabled={isSubmitting}
         />
       </div>
 
@@ -87,6 +95,7 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
             options={months.map(m => ({ value: m.value.toString(), label: m.label }))}
             value={month.toString()}
             onChange={(val) => setMonth(Number(val))}
+            disabled={isSubmitting}
           />
         </div>
         <div className="flex flex-col gap-xs">
@@ -95,8 +104,9 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
             type="number" 
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="px-md py-sm min-h-[44px] rounded-lg border border-border-main text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-light transition-all"
+            className="px-md py-sm min-h-[2.75rem] rounded-lg border border-border-main text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-light transition-all"
             required
+            disabled={isSubmitting}
           />
         </div>
       </div>
@@ -107,6 +117,7 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
           variant="outline" 
           className="flex-1"
           onClick={onClose}
+          disabled={isSubmitting}
         >
           Cancel
         </Button>
@@ -114,6 +125,7 @@ export function RevenuePlanForm({ onClose, editPlan }: RevenuePlanFormProps) {
           type="submit" 
           variant="primary" 
           className="flex-1"
+          isLoading={isSubmitting}
         >
           {editPlan ? 'Update Plan' : 'Create Plan'}
         </Button>

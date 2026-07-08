@@ -18,8 +18,12 @@ const TYPE_OPTIONS = [
 ];
 
 export default function Categories() {
-  const { activities } = useFinance();
+  const { activities, refreshAll } = useFinance();
   const { categories: dbCategories, addCategory, updateCategory, deleteCategory, loading } = useCategories();
+  
+  React.useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
   const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -116,6 +120,13 @@ export default function Categories() {
       }
     }).then(async (result) => {
       if (result.isConfirmed && result.value) {
+        Swal.fire({
+          title: 'Saving...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
         try {
           await updateCategory(catId, { 
             name: result.value.trim(),
@@ -161,6 +172,13 @@ export default function Categories() {
       confirmButtonText: 'Yes, delete it!'
     }).then(async (result) => {
       if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Deleting...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
         try {
           await deleteCategory(catId);
           Swal.fire('Deleted!', 'Category has been deleted.', 'success');
@@ -222,6 +240,13 @@ export default function Categories() {
            Swal.fire('Error', 'Category already exists!', 'error');
            return;
         }
+        Swal.fire({
+          title: 'Adding...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
         try {
           await addCategory({ 
             name, 

@@ -12,11 +12,11 @@ import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 
 export default function Investments() {
   const loading = useModuleLoading();
-  const { investments, addInvestment, updateInvestment, fetchInvestments } = useFinance();
+  const { investments, addInvestment, updateInvestment, refreshAll } = useFinance();
   
   useEffect(() => {
-    fetchInvestments();
-  }, [fetchInvestments]);
+    refreshAll();
+  }, [refreshAll]);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingInv, setEditingInv] = useState<Investment | null>(null);

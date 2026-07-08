@@ -12,11 +12,11 @@ import Modal from '../../ui/components/common/Modal';
 
 export default function Assets() {
   const loading = useModuleLoading();
-  const { wallets, cards, investments, debts, assets, addAsset, updateAsset, fetchAssets } = useFinance();
+  const { wallets, cards, investments, debts, assets, addAsset, updateAsset, refreshAll } = useFinance();
   
   useEffect(() => {
-    fetchAssets();
-  }, [fetchAssets]);
+    refreshAll();
+  }, [refreshAll]);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);

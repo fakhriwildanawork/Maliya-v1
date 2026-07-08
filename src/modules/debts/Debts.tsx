@@ -20,11 +20,11 @@ const TYPE_OPTIONS = [
 
 export default function Debts() {
   const loading = useModuleLoading();
-  const { debts, addDebt, updateDebt, deleteDebt, fetchDebts } = useFinance();
+  const { debts, addDebt, updateDebt, deleteDebt, refreshAll } = useFinance();
   
   useEffect(() => {
-    fetchDebts();
-  }, [fetchDebts]);
+    refreshAll();
+  }, [refreshAll]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -103,10 +103,22 @@ export default function Debts() {
         }
         return { title, name, description: description || undefined, type, amount, dueDate, paymentLogs: [] };
       }
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed && result.value) {
-        addDebt(result.value);
-        Swal.fire('Added!', 'Debt/Loan record has been added.', 'success');
+        Swal.fire({
+          title: 'Saving...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+        try {
+          await addDebt(result.value);
+          Swal.fire('Added!', 'Debt/Loan record has been added.', 'success');
+        } catch (err) {
+          console.error(err);
+          Swal.fire('Error', 'Failed to add debt record', 'error');
+        }
       }
     });
   };
@@ -152,7 +164,7 @@ export default function Debts() {
         }
         return { amt, date, newDueDate, note };
       }
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed && result.value) {
         const { amt, date, newDueDate, note } = result.value;
         const newPaid = debt.paidAmount + amt;
@@ -173,11 +185,24 @@ export default function Debts() {
           paymentLogs: [...(debt.paymentLogs || []), newLog]
         };
         
-        updateDebt(updatedDebt.id, updatedDebt as Partial<Debt>);
-        if (selectedDebt?.id === debt.id) {
-          setSelectedDebt(updatedDebt as Debt);
+        Swal.fire({
+          title: 'Recording...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        try {
+          await updateDebt(updatedDebt.id, updatedDebt as Partial<Debt>);
+          if (selectedDebt?.id === debt.id) {
+            setSelectedDebt(updatedDebt as Debt);
+          }
+          Swal.fire('Recorded!', 'Payment has been updated.', 'success');
+        } catch (err) {
+          console.error(err);
+          Swal.fire('Error', 'Failed to record payment', 'error');
         }
-        Swal.fire('Recorded!', 'Payment has been updated.', 'success');
       }
     });
   };
@@ -191,10 +216,22 @@ export default function Debts() {
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        deleteDebt(debtId);
-        Swal.fire('Deleted!', 'Record has been deleted.', 'success');
+        Swal.fire({
+          title: 'Deleting...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+        try {
+          await deleteDebt(debtId);
+          Swal.fire('Deleted!', 'Record has been deleted.', 'success');
+        } catch (err) {
+          console.error(err);
+          Swal.fire('Error', 'Failed to delete record', 'error');
+        }
       }
     });
   };

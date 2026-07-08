@@ -39,6 +39,7 @@ interface FinanceContextType {
   fetchAssets: () => Promise<void>;
   fetchFamilyMembers: () => Promise<void>;
   fetchCategories: () => Promise<void>;
+  refreshAll: () => Promise<void>;
 
   // CRUD Operations
   addActivity: (activity: Partial<Activity>) => Promise<void>;
@@ -191,10 +192,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } catch (err) { console.error(err); }
   }, []);
 
-  useEffect(() => {
-    if (!initialFetchRef.current) {
-      setLoading(true);
-      Promise.all([
+  const refreshAll = useCallback(async () => {
+    try {
+      await Promise.all([
         fetchAccounts(),
         fetchActivities(0, true),
         fetchBudgets(),
@@ -204,43 +204,40 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         fetchAssets(),
         fetchFamilyMembers(),
         fetchCategories()
-      ]).finally(() => setLoading(false));
-      initialFetchRef.current = true;
+      ]);
+    } catch (err) {
+      console.error('Error refreshing data:', err);
     }
   }, [fetchAccounts, fetchActivities, fetchBudgets, fetchGoals, fetchDebts, fetchInvestments, fetchAssets, fetchFamilyMembers, fetchCategories]);
+
+  useEffect(() => {
+    if (!initialFetchRef.current) {
+      setLoading(true);
+      refreshAll().finally(() => setLoading(false));
+      initialFetchRef.current = true;
+    }
+  }, [refreshAll]);
 
   // --- CRUD Operations ---
   
   const addActivity = async (data: Partial<Activity>) => {
     await transactionService.create(data as any);
-    await Promise.all([
-      fetchActivities(0, true),
-      fetchAccounts()
-    ]);
+    await refreshAll();
   };
 
   const updateActivity = async (id: string, data: Partial<Activity>) => {
     await transactionService.update(id, data as any);
-    await Promise.all([
-      fetchActivities(0, true),
-      fetchAccounts()
-    ]);
+    await refreshAll();
   };
 
   const deleteActivity = async (id: string) => {
     await transactionService.delete(id);
-    await Promise.all([
-      fetchActivities(0, true),
-      fetchAccounts()
-    ]);
+    await refreshAll();
   };
 
   const deleteActivities = async (ids: string[]) => {
     await transactionService.deleteMany(ids);
-    await Promise.all([
-      fetchActivities(0, true),
-      fetchAccounts()
-    ]);
+    await refreshAll();
   };
 
   const addWallet = async (data: Partial<Wallet>) => {
@@ -465,6 +462,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       fetchAssets,
       fetchFamilyMembers,
       fetchCategories,
+      refreshAll,
       addActivity,
       updateActivity,
       deleteActivity,

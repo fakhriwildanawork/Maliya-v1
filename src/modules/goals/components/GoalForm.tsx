@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Goal } from '../../../logic/types/finance';
 import { cn } from '../../../logic/utils/classNames';
 import * as TOKENS from '../../../ui/styles/tokens';
+import { Button } from '../../../ui/components/elements/Button';
 
 interface GoalFormProps {
   initialData?: Goal | null;
-  onSubmit: (data: Partial<Goal>) => void;
+  onSubmit: (data: Partial<Goal>) => Promise<void> | void;
   onCancel: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function GoalForm({ initialData, onSubmit, onCancel }: GoalFormPr
     icon: '💰',
     status: 'In Progress'
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -26,9 +28,14 @@ export default function GoalForm({ initialData, onSubmit, onCancel }: GoalFormPr
     }
   }, [initialData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -39,9 +46,10 @@ export default function GoalForm({ initialData, onSubmit, onCancel }: GoalFormPr
           <input
             type="text"
             required
+            disabled={isSubmitting}
             value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-md py-sm min-h-[44px] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
+            className="w-full px-md py-sm min-h-[2.75rem] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
             placeholder="e.g. Dream House"
           />
         </div>
@@ -49,8 +57,9 @@ export default function GoalForm({ initialData, onSubmit, onCancel }: GoalFormPr
           <label className="text-sm font-semibold text-text-secondary">Category</label>
           <select
             value={formData.category}
+            disabled={isSubmitting}
             onChange={e => setFormData({ ...formData, category: e.target.value })}
-            className="w-full px-md py-sm min-h-[44px] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all bg-white"
+            className="w-full px-md py-sm min-h-[2.75rem] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all bg-white"
           >
             <option value="Saving">Saving</option>
             <option value="Investment">Investment</option>
@@ -71,9 +80,10 @@ export default function GoalForm({ initialData, onSubmit, onCancel }: GoalFormPr
             type="number"
             required
             min="0"
+            disabled={isSubmitting}
             value={formData.targetAmount || ''}
             onChange={e => setFormData({ ...formData, targetAmount: Number(e.target.value) })}
-            className="w-full px-md py-sm min-h-[44px] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
+            className="w-full px-md py-sm min-h-[2.75rem] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
             placeholder="0"
           />
         </div>
@@ -82,9 +92,10 @@ export default function GoalForm({ initialData, onSubmit, onCancel }: GoalFormPr
           <input
             type="number"
             min="0"
+            disabled={isSubmitting}
             value={formData.currentAmount || ''}
             onChange={e => setFormData({ ...formData, currentAmount: Number(e.target.value) })}
-            className="w-full px-md py-sm min-h-[44px] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
+            className="w-full px-md py-sm min-h-[2.75rem] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
             placeholder="0"
           />
         </div>
@@ -96,37 +107,42 @@ export default function GoalForm({ initialData, onSubmit, onCancel }: GoalFormPr
           <input
             type="date"
             required
+            disabled={isSubmitting}
             value={formData.deadline}
             onChange={e => setFormData({ ...formData, deadline: e.target.value })}
-            className="w-full px-md py-sm min-h-[44px] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
+            className="w-full px-md py-sm min-h-[2.75rem] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
           />
         </div>
         <div className="space-y-xs">
           <label className="text-sm font-semibold text-text-secondary">Icon (Emoji)</label>
           <input
             type="text"
+            disabled={isSubmitting}
             value={formData.icon}
             onChange={e => setFormData({ ...formData, icon: e.target.value })}
-            className="w-full px-md py-sm min-h-[44px] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
+            className="w-full px-md py-sm min-h-[2.75rem] text-base sm:text-sm border border-border-main rounded-lg focus:ring-2 focus:ring-primary-light outline-none transition-all"
             placeholder="💰"
           />
         </div>
       </div>
 
       <div className="flex flex-col-reverse sm:flex-row justify-end gap-md pt-lg border-t border-border-light">
-        <button
+        <Button
           type="button"
           onClick={onCancel}
-          className="px-lg py-sm min-h-[44px] w-full sm:w-auto border border-border-main rounded-full hover:bg-bg-sidebar transition-colors font-semibold text-text-secondary"
+          variant="outline"
+          className="flex-1"
+          disabled={isSubmitting}
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className="px-lg py-sm min-h-[44px] w-full sm:w-auto bg-primary-main text-white hover:bg-primary-dark transition-colors font-semibold rounded-full shadow-sm"
+          className="flex-1"
+          isLoading={isSubmitting}
         >
           {initialData ? 'Update Goal' : 'Create Goal'}
-        </button>
+        </Button>
       </div>
     </form>
   );

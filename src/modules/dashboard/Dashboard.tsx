@@ -19,18 +19,14 @@ export default function Dashboard() {
   const { currentUser } = useAuth();
   const { 
     deleteActivity, 
-    fetchAccounts, 
-    fetchBudgets, 
-    fetchActivities 
+    refreshAll 
   } = useFinance();
   const { isCompact } = useViewport();
   const loading = useModuleLoading();
 
   useEffect(() => {
-    fetchAccounts();
-    fetchBudgets();
-    fetchActivities(0, true);
-  }, [fetchAccounts, fetchBudgets, fetchActivities]);
+    refreshAll();
+  }, [refreshAll]);
 
   const { 
     totalBalance, 

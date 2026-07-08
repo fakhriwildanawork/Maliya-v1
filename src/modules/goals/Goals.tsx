@@ -13,11 +13,11 @@ import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 
 export default function Goals() {
   const loading = useModuleLoading();
-  const { goals, addGoal, updateGoal, deleteGoal, fetchGoals } = useFinance();
+  const { goals, addGoal, updateGoal, deleteGoal, refreshAll } = useFinance();
   
   useEffect(() => {
-    fetchGoals();
-  }, [fetchGoals]);
+    refreshAll();
+  }, [refreshAll]);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);

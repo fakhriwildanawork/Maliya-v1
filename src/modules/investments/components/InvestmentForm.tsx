@@ -6,7 +6,7 @@ import FixDropdown from '../../../ui/components/elements/FixDropdown';
 
 interface InvestmentFormProps {
   initialData?: Investment | null;
-  onSubmit: (data: Partial<Investment>) => void;
+  onSubmit: (data: Partial<Investment>) => Promise<void> | void;
   onCancel: () => void;
 }
 
@@ -17,6 +17,7 @@ export default function InvestmentForm({ initialData, onSubmit, onCancel }: Inve
   const [averageBuyPrice, setAverageBuyPrice] = useState(initialData?.averageBuyPrice || 0);
   const [currentPrice, setCurrentPrice] = useState(initialData?.currentPrice || initialData?.averageBuyPrice || 0);
   const [purchaseDate, setPurchaseDate] = useState(initialData?.purchaseDate || new Date().toISOString().split('T')[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const investmentTypes: { value: Investment['type']; label: string }[] = [
     { value: 'Stock', label: 'Stock' },
@@ -28,83 +29,93 @@ export default function InvestmentForm({ initialData, onSubmit, onCancel }: Inve
     { value: 'Other', label: 'Other' }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const qty = Number(quantity);
-    const avgBuy = Number(averageBuyPrice);
-    const currPrice = currentPrice > 0 ? Number(currentPrice) : avgBuy;
-    
-    const investedAmount = qty * avgBuy;
-    const currentValue = qty * currPrice;
+    setIsSubmitting(true);
+    try {
+      const qty = Number(quantity);
+      const avgBuy = Number(averageBuyPrice);
+      const currPrice = currentPrice > 0 ? Number(currentPrice) : avgBuy;
+      
+      const investedAmount = qty * avgBuy;
+      const currentValue = qty * currPrice;
 
-    onSubmit({
-      name,
-      type,
-      quantity: qty,
-      averageBuyPrice: avgBuy,
-      currentPrice: currPrice,
-      investedAmount,
-      currentValue,
-      purchaseDate,
-      status: 'Active'
-    });
+      await onSubmit({
+        name,
+        type,
+        quantity: qty,
+        averageBuyPrice: avgBuy,
+        currentPrice: currPrice,
+        investedAmount,
+        currentValue,
+        purchaseDate,
+        status: 'Active'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-[1rem]">
+      <div className="flex flex-col gap-[0.25rem]">
         <label className="text-sm font-medium text-gray-500">Asset Name</label>
         <input 
           type="text" 
           value={name}
+          disabled={isSubmitting}
           onChange={(e) => setName(e.target.value)}
-          className="px-4 py-2 min-h-[44px] rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-base sm:text-sm"
+          className="px-[1rem] py-[0.5rem] min-h-[2.75rem] rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-base sm:text-sm disabled:opacity-70 disabled:bg-gray-50"
           placeholder="e.g. BBRI, Bitcoin, Mutual Fund A"
           required
         />
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-[0.25rem]">
         <label className="text-sm font-medium text-gray-500">Category Type</label>
         <FixDropdown 
           options={investmentTypes}
           value={type}
+          disabled={isSubmitting}
           onChange={(val) => setType(val as Investment['type'])}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[1rem]">
+        <div className="flex flex-col gap-[0.25rem]">
           <label className="text-sm font-medium text-gray-500">Quantity (Units)</label>
           <input 
             type="number" 
             step="any"
+            disabled={isSubmitting}
             value={quantity === 0 ? '' : quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
-            className="px-4 py-2 min-h-[44px] rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-base sm:text-sm"
+            className="px-[1rem] py-[0.5rem] min-h-[2.75rem] rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-base sm:text-sm disabled:opacity-70 disabled:bg-gray-50"
             placeholder="0.00"
             required
           />
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-[0.25rem]">
           <label className="text-sm font-medium text-gray-500">Purchase Date</label>
           <input 
             type="date" 
+            disabled={isSubmitting}
             value={purchaseDate}
             onChange={(e) => setPurchaseDate(e.target.value)}
-            className="px-4 py-2 min-h-[44px] rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-base sm:text-sm"
+            className="px-[1rem] py-[0.5rem] min-h-[2.75rem] rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-base sm:text-sm disabled:opacity-70 disabled:bg-gray-50"
             required
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[1rem]">
+        <div className="flex flex-col gap-[0.25rem]">
           <label className="text-sm font-medium text-gray-500">Average Buy Price per Unit</label>
           <InputPrice 
             name="averageBuyPrice"
             value={averageBuyPrice}
+            disabled={isSubmitting}
             onChange={(_, val) => {
               setAverageBuyPrice(val);
               if (currentPrice === 0 || currentPrice === averageBuyPrice) {
@@ -116,11 +127,12 @@ export default function InvestmentForm({ initialData, onSubmit, onCancel }: Inve
           />
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-[0.25rem]">
           <label className="text-sm font-medium text-gray-500">Current Market Price per Unit</label>
           <InputPrice 
             name="currentPrice"
             value={currentPrice}
+            disabled={isSubmitting}
             onChange={(_, val) => setCurrentPrice(val)}
             placeholder="0"
             required
@@ -129,7 +141,7 @@ export default function InvestmentForm({ initialData, onSubmit, onCancel }: Inve
       </div>
 
       {quantity > 0 && averageBuyPrice > 0 && (
-        <div className="p-4 rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-2">
+        <div className="p-[1rem] rounded-xl bg-gray-50 border border-gray-100 flex flex-col gap-[0.5rem]">
           <div className="flex justify-between text-xs text-gray-500">
             <span>Total Invested Amount:</span>
             <span className="font-semibold text-gray-900">
@@ -158,9 +170,9 @@ export default function InvestmentForm({ initialData, onSubmit, onCancel }: Inve
         </div>
       )}
 
-      <div className="flex justify-end gap-4 mt-4">
-        <Button variant="outline" type="button" className="flex-1" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" className="flex-1 bg-green-500 text-white hover:bg-green-600 rounded-full font-medium transition-colors">
+      <div className="flex justify-end gap-[1rem] mt-[1rem]">
+        <Button variant="outline" type="button" className="flex-1" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
+        <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-600 border-none" isLoading={isSubmitting}>
           Save Investment
         </Button>
       </div>

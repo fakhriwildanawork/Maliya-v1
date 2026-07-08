@@ -26,19 +26,22 @@ import Modal from '../../ui/components/common/Modal';
 import { PageLoadingState } from '../../ui/components/common/PageLoadingState';
 import { cn } from '../../logic/utils/classNames';
 
+import { Button } from '../../ui/components/elements/Button';
+
 export default function FamilyMembers() {
   const loading = useModuleLoading();
-  const { familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember, fetchFamilyMembers } = useFinance();
+  const { familyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember, refreshAll } = useFinance();
   
   useEffect(() => {
-    fetchFamilyMembers();
-  }, [fetchFamilyMembers]);
+    refreshAll();
+  }, [refreshAll]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -90,7 +93,7 @@ export default function FamilyMembers() {
   };
 
   // Handle Save
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       Swal.fire({
@@ -102,50 +105,57 @@ export default function FamilyMembers() {
       return;
     }
 
-    const finalEmail = email.trim() ? email : `${name.replace(/\s+/g, '').toLowerCase()}_${Date.now()}@family.com`;
+    setIsSubmitting(true);
+    try {
+      const finalEmail = email.trim() ? email : `${name.replace(/\s+/g, '').toLowerCase()}_${Date.now()}@family.com`;
 
-    if (editingMember) {
-      updateFamilyMember({
-        ...editingMember,
-        name,
-        email: finalEmail,
-        phone,
-        relationship,
-        role,
-        status,
-        accessCode,
-        password,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-      });
-      Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: 'Family member data successfully updated.',
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } else {
-      addFamilyMember({
-        name,
-        email: finalEmail,
-        phone,
-        relationship,
-        role,
-        status,
-        accessCode,
-        password,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-      });
-      Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: 'New family member successfully registered.',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      if (editingMember) {
+        await updateFamilyMember({
+          ...editingMember,
+          name,
+          email: finalEmail,
+          phone,
+          relationship,
+          role,
+          status,
+          accessCode,
+          password,
+          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+        });
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Family member data successfully updated.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } else {
+        await addFamilyMember({
+          name,
+          email: finalEmail,
+          phone,
+          relationship,
+          role,
+          status,
+          accessCode,
+          password,
+          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+        });
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'New family member successfully registered.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to save family member', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsModalOpen(false);
   };
 
   // Handle Delete
@@ -387,56 +397,60 @@ export default function FamilyMembers() {
         title={editingMember ? 'Edit Family Member' : 'Register Family Member'}
         width="32rem"
       >
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-[1rem]">
           {/* Name */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Full Name</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-[0.375rem]">Full Name</label>
             <input
               type="text"
               required
+              disabled={isSubmitting}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Siti Rahma"
-              className="w-full px-4 py-2 min-h-[44px] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900"
+              className="w-full px-[1rem] py-[0.5rem] min-h-[2.75rem] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-400"
             />
           </div>
 
           {/* Grid for credentials (Access Code & Password) */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-[1rem]">
             {/* Access Code */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Access Code</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-[0.375rem]">Access Code</label>
               <input
                 type="text"
+                disabled={isSubmitting}
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value)}
                 placeholder="e.g. ACC_123"
-                className="w-full px-4 py-2 min-h-11 border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900"
+                className="w-full px-[1rem] py-[0.5rem] min-h-[2.75rem] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Password</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-[0.375rem]">Password</label>
               <input
                 type="text"
+                disabled={isSubmitting}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Access password"
-                className="w-full px-4 py-2 min-h-11 border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900"
+                className="w-full px-[1rem] py-[0.5rem] min-h-[2.75rem] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
           </div>
 
           {/* Grid for relationship & role */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-[1rem]">
             {/* Relationship */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Family Relationship</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-[0.375rem]">Family Relationship</label>
               <select
                 value={relationship}
+                disabled={isSubmitting}
                 onChange={(e) => setRelationship(e.target.value as any)}
-                className="w-full px-4 py-2 min-h-[44px] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900"
+                className="w-full px-[1rem] py-[0.5rem] min-h-[2.75rem] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-400"
               >
                 <option value="Parent">Parent</option>
                 <option value="Spouse">Spouse</option>
@@ -449,11 +463,12 @@ export default function FamilyMembers() {
 
             {/* Role */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Access Right</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-[0.375rem]">Access Right</label>
               <select
                 value={role}
+                disabled={isSubmitting}
                 onChange={(e) => setRole(e.target.value as any)}
-                className="w-full px-4 py-2 min-h-[44px] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full px-[1rem] py-[0.5rem] min-h-[2.75rem] border border-gray-200 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-400"
               >
                 <option value="Owner">Owner</option>
                 <option value="Admin">Admin</option>
@@ -464,21 +479,24 @@ export default function FamilyMembers() {
           </div>
 
           {/* Modal Footer */}
-          <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 bg-gray-50/50 -mx-6 -mb-6 p-6 mt-4">
-            <button
+          <div className="flex items-center justify-end gap-[0.75rem] pt-[1.5rem] border-t border-gray-100 bg-gray-50/50 -mx-[1.5rem] -mb-[1.5rem] p-[1.5rem] mt-[1rem]">
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => setIsModalOpen(false)}
-              className="px-5 py-2 min-h-[44px] text-sm font-medium text-gray-500 hover:text-gray-950 transition-colors"
+              disabled={isSubmitting}
+              className="text-gray-500 hover:text-gray-950"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-5 py-2 min-h-[44px] bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium shadow-sm transition-colors flex items-center gap-1.5"
+              isLoading={isSubmitting}
+              className="bg-green-500 hover:bg-green-600 border-none rounded-full"
             >
-              <UserCheck2 className="w-4 h-4" />
+              <UserCheck2 className="w-4 h-4 mr-2" />
               Save Member
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

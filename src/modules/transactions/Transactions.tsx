@@ -42,8 +42,13 @@ export default function Transactions() {
     addActivity: addTransaction,
     updateActivity: editTransaction,
     deleteActivity: removeTransaction,
-    deleteActivities: removeTransactions
+    deleteActivities: removeTransactions,
+    refreshAll
   } = useFinance();
+  
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);

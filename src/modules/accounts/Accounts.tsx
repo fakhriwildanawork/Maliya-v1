@@ -30,12 +30,12 @@ export default function Accounts() {
     addCard: handleAddCard,
     updateCard: handleUpdateCard,
     deleteCard: handleDeleteCard,
-    fetchAccounts,
+    refreshAll,
   } = useFinance();
   
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    refreshAll();
+  }, [refreshAll]);
 
   // 1. Calculations
   const walletBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
