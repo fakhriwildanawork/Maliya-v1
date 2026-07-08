@@ -135,7 +135,16 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         body: JSON.stringify({ image: base64Image, context }),
       });
 
-      if (!response.ok) throw new Error('AI analysis failed');
+      if (!response.ok) {
+        let errorMessage = 'AI analysis failed';
+        try {
+          const errorData = await response.json();
+          if (errorData.error) errorMessage = errorData.error;
+        } catch (e) {
+          // Keep default error message
+        }
+        throw new Error(errorMessage);
+      }
       
       const data = await response.json();
       

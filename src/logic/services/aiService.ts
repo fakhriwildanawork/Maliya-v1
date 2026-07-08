@@ -57,7 +57,7 @@ export async function analyzeReceipt(base64Image: string, context: { categories:
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-flash-latest',
+    model: 'gemini-1.5-flash',
     contents: [
       {
         role: "user",
