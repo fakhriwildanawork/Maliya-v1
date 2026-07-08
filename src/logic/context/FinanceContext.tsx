@@ -194,16 +194,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const refreshAll = useCallback(async () => {
     try {
+      // Fetch essential data first to avoid overwhelming the connection
+      await fetchAccounts();
+      await fetchCategories();
+      await fetchFamilyMembers();
+      
+      // Then fetch the rest in parallel
       await Promise.all([
-        fetchAccounts(),
         fetchActivities(0, true),
         fetchBudgets(),
         fetchGoals(),
         fetchDebts(),
         fetchInvestments(),
-        fetchAssets(),
-        fetchFamilyMembers(),
-        fetchCategories()
+        fetchAssets()
       ]);
     } catch (err) {
       console.error('Error refreshing data:', err);

@@ -147,7 +147,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         familyMembers: [],
       };
 
-      const response = await fetch('/api/ai/analyze-receipt', {
+      const response = await fetch(`${window.location.origin}/api/ai/analyze-receipt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64Image, context }),
@@ -483,6 +483,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
                   ref={fileInputRef} 
                   onChange={handleImageChange} 
                   accept="image/*" 
+                  capture="environment"
                   className="hidden" 
                 />
                 <button
