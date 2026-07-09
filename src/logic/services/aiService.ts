@@ -1,28 +1,7 @@
 import Groq from "groq-sdk";
-import { createWorker } from "tesseract.js";
 
-export async function analyzeReceipt(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+export async function analyzeReceipt(text: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
   try {
-    console.log("Starting OCR process with Tesseract.js (CDN Mode)...");
-    
-    // Fix for Vercel: Use CDN assets for Tesseract worker and WASM to avoid ENOENT errors
-    const worker = await createWorker('ind+eng', 1, {
-      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd.wasm.js',
-      logger: m => console.log(m)
-    });
-
-    // Extract base64 data regardless of whether header is present
-    const base64Data = base64Image.includes('base64,') 
-      ? base64Image.split('base64,')[1] 
-      : base64Image;
-      
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    const { data: { text } } = await worker.recognize(buffer);
-    await worker.terminate();
-
     if (!text || text.trim().length < 5) {
       throw new Error("Gagal membaca teks dari gambar. Pastikan gambar jelas.");
     }
@@ -91,7 +70,7 @@ export async function analyzeReceipt(base64Image: string, context: { categories:
     return result;
 
   } catch (error: any) {
-    console.error("AI Analysis Error (OCR + Groq):", error);
+    console.error("AI Analysis Error (Groq):", error);
     throw error;
   }
 }
