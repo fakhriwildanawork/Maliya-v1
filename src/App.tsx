@@ -22,21 +22,35 @@ import FamilyMembers from './modules/family-members/FamilyMembers';
 import Sidebar from './ui/components/layout/Sidebar';
 import Topbar from './ui/components/layout/Topbar';
 import { NavigationProvider, useNavigation } from './logic/context/NavigationContext';
-import { FinanceProvider } from './logic/context/FinanceContext';
+import { FinanceProvider, useFinance } from './logic/context/FinanceContext';
 import { ViewportProvider } from './logic/context/ViewportContext';
 import { AuthProvider, useAuth } from './logic/context/AuthContext';
 import Login from './modules/auth/Login';
 import { Loader2 } from 'lucide-react';
 import { MALIYA_LOGO_URL } from './assets';
+import Modal from './ui/components/common/Modal';
+import TransactionForm from './modules/transactions/components/TransactionForm';
+import { TransactionInsert } from './logic/types/transactions';
 
 import Settings from './modules/settings/Settings';
 
 function AppContent() {
   const { activeRoute } = useNavigation();
+  const { addActivity } = useFinance();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isGlobalFormOpen, setIsGlobalFormOpen] = useState(false);
+
+  const handleGlobalFormSubmit = async (data: Partial<TransactionInsert>) => {
+    try {
+      await addActivity(data as TransactionInsert);
+      setIsGlobalFormOpen(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
-    <div className="flex w-full h-screen font-sans bg-gray-50 text-gray-900 overflow-hidden">
+    <div className="flex w-full h-screen font-sans bg-gray-50 text-gray-900 overflow-hidden relative">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <Topbar onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} />
@@ -66,6 +80,25 @@ function AppContent() {
           )}
         </div>
       </div>
+      
+      <button
+        onClick={() => setIsGlobalFormOpen(true)}
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-105 active:scale-95 transition-transform overflow-hidden flex items-center justify-center bg-white"
+        title="Add Transaction"
+      >
+        <img src={MALIYA_LOGO_URL} alt="Add Transaction" className="w-full h-full object-cover" />
+      </button>
+
+      <Modal 
+        isOpen={isGlobalFormOpen} 
+        onClose={() => setIsGlobalFormOpen(false)}
+        title="New Transaction"
+      >
+        <TransactionForm 
+          onSubmit={handleGlobalFormSubmit} 
+          onCancel={() => setIsGlobalFormOpen(false)} 
+        />
+      </Modal>
     </div>
   );
 }
