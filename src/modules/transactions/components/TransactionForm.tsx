@@ -121,22 +121,51 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Image = reader.result as string;
-        setSelectedImage(base64Image);
-        setFormData(prev => {
-          const newAttachments = prev.attachments ? [...prev.attachments] : [];
-          if (!newAttachments.includes(file.name)) {
-            newAttachments.push(file.name);
-          }
-          return { ...prev, attachments: newAttachments };
-        });
+      const imageUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.src = imageUrl;
+      
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
         
-        // Trigger AI analysis automatically
-        await handleAnalyzeAI(base64Image);
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const base64Image = canvas.toDataURL('image/jpeg', 0.6);
+          
+          setSelectedImage(base64Image);
+          setFormData(prev => {
+            const newAttachments = prev.attachments ? [...prev.attachments] : [];
+            if (!newAttachments.includes(file.name)) {
+              newAttachments.push(file.name);
+            }
+            return { ...prev, attachments: newAttachments };
+          });
+          
+          URL.revokeObjectURL(imageUrl);
+          
+          // Trigger AI analysis automatically
+          await handleAnalyzeAI(base64Image);
+        }
       };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -527,11 +556,11 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
                     <button
                       type="button"
                       onClick={() => {
-                        setShowPhotoOptions(false);
                         if (fileInputCameraRef.current) {
                           fileInputCameraRef.current.value = '';
                           fileInputCameraRef.current.click();
                         }
+                        setShowPhotoOptions(false);
                       }}
                       className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 font-medium"
                     >
@@ -540,11 +569,11 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
                     <button
                       type="button"
                       onClick={() => {
-                        setShowPhotoOptions(false);
                         if (fileInputGalleryRef.current) {
                           fileInputGalleryRef.current.value = '';
                           fileInputGalleryRef.current.click();
                         }
+                        setShowPhotoOptions(false);
                       }}
                       className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 font-medium"
                     >
