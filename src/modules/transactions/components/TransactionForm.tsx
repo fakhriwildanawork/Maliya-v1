@@ -120,8 +120,9 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
+        setSelectedImage(base64Image);
         setFormData(prev => {
           const newAttachments = prev.attachments ? [...prev.attachments] : [];
           if (!newAttachments.includes(file.name)) {
@@ -129,19 +130,20 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
           }
           return { ...prev, attachments: newAttachments };
         });
+        
+        // Trigger AI analysis automatically
+        await handleAnalyzeAI(base64Image);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleAnalyzeAI = async () => {
-    if (!selectedImage) return;
+  const handleAnalyzeAI = async (base64Image: string) => {
+    if (!base64Image) return;
     
     setIsAnalyzing(true);
     setAnalyzeStatus('Extracting text (OCR)...');
     try {
-      const base64Image = selectedImage;
-      
       const worker = await createWorker('ind+eng');
       const { data: { text } } = await worker.recognize(base64Image);
       await worker.terminate();
@@ -449,7 +451,15 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
   }, [debts, formData.category]);
 
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <>
+      {isAnalyzing && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <Loader2 className="w-12 h-12 text-green-500 animate-spin mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900">{analyzeStatus}</h3>
+          <p className="text-sm text-gray-500 mt-2">Please wait while AI extracts data...</p>
+        </div>
+      )}
+      <div className="flex flex-col gap-6 w-full">
       {/* AI Receipt Upload Section */}
       <div className={cn("p-4 border-2 border-dashed rounded-xl transition-all", selectedImage ? "border-green-500 bg-green-50" : "border-gray-200 hover:border-green-400")}>
         <div className="flex flex-col items-center gap-3">
@@ -488,30 +498,12 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className={cn("flex-1 py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-xs", 
+                  className={cn("w-full py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-xs", 
                     selectedImage ? "bg-white border border-green-200 text-green-700 hover:bg-green-100" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   )}
                 >
                   {selectedImage ? 'Change Photo' : 'Select Photo'}
                 </button>
-                
-                {selectedImage && (
-                  <button
-                    type="button"
-                    onClick={handleAnalyzeAI}
-                    disabled={isAnalyzing}
-                    className={cn("flex-1 py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-xs",
-                      BG_PRIMARY, TEXT_INVERSE, "hover:opacity-90 disabled:opacity-50"
-                    )}
-                  >
-                    {isAnalyzing ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Wand2 size={16} />
-                    )}
-                    {isAnalyzing ? analyzeStatus : 'AI Analysis'}
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -803,5 +795,6 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
       </div>
     </form>
   </div>
+  </>
 );
 }
