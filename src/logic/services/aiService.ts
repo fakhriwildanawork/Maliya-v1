@@ -2,27 +2,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import Groq from "groq-sdk";
 import { createWorker } from "tesseract.js";
 
-let currentKeyIndex = 1;
-
-function getNextGeminiKey(): string {
-  const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_1,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-    process.env.GEMINI_API_KEY_4,
-    process.env.GEMINI_API_KEY_5,
-  ].filter(Boolean) as string[];
-
-  if (keys.length === 0) {
-    throw new Error("No GEMINI_API_KEY found in environment variables");
-  }
-
-  const key = keys[(currentKeyIndex - 1) % keys.length];
-  currentKeyIndex++;
-  return key;
-}
-
 const receiptSchema = {
   type: Type.OBJECT,
   properties: {
@@ -40,12 +19,16 @@ const receiptSchema = {
 
 async function performOCR(base64Image: string): Promise<string> {
   try {
-    // Tesseract.js in Node
+    console.log("Starting OCR process...");
     const worker = await createWorker('ind+eng');
+    
     const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
+    
     const { data: { text } } = await worker.recognize(buffer);
     await worker.terminate();
+    
+    console.log("OCR successful.");
     return text;
   } catch (error) {
     console.error("OCR Error:", error);
@@ -53,47 +36,28 @@ async function performOCR(base64Image: string): Promise<string> {
   }
 }
 
-async function fallbackWithGroq(ocrText: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
-  if (!process.env.GROQ_API_KEY) {
-    throw new Error("GROQ_API_KEY is not configured for fallback");
-  }
-
+async function extractWithGroq(ocrText: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+  if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   
   const systemPrompt = `
-    You are a professional financial assistant for "Maliya" - a Personal Finance OS.
-    Extract transaction data from the provided OCR text.
-    
-    CONTEXT:
+    You are an elite financial data extractor for "Maliya" - a Personal Finance OS.
+    CONTEXT (STRICT MAPPING):
     - Categories: ${context.categories.join(", ")}
     - Accounts: ${context.accounts.join(", ")}
     - Family Members: ${context.familyMembers.join(", ")}
     
-    RULES:
-    1. Extract: date (YYYY-MM-DD), amount (number), title (merchant name), description (items), type (income/expense), category_name (map to context), account_name (map to context), family_member_name (map to context).
-    2. CURRENCY: Indonesian receipts use dots for thousands. 70.000 is 70000.
-    3. Return ONLY valid JSON.
-    
-    JSON STRUCTURE:
-    {
-      "date": "YYYY-MM-DD",
-      "amount": 0,
-      "title": "...",
-      "description": "...",
-      "type": "expense",
-      "category_name": "...",
-      "account_name": "...",
-      "family_member_name": "..."
-    }
+    Rules: Return ONLY valid JSON. Map values strictly to context. Indonesian dots are thousand separators.
+    JSON structure: date(YYYY-MM-DD), amount(number), title, description, type(expense/income), category_name, account_name, family_member_name.
   `;
 
   const completion = await groq.chat.completions.create({
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Extract from this OCR text: ${ocrText}` }
+      { role: "user", content: `OCR TEXT:\n${ocrText}` }
     ],
     model: "llama-3.3-70b-versatile",
-    temperature: 0,
+    temperature: 0.1,
     response_format: { type: "json_object" }
   });
 
@@ -102,8 +66,10 @@ async function fallbackWithGroq(ocrText: string, context: { categories: string[]
   return JSON.parse(content);
 }
 
-export async function analyzeReceipt(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
-  const apiKey = getNextGeminiKey();
+async function analyzeWithGemini(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+
   const ai = new GoogleGenAI({
     apiKey,
     httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
@@ -120,64 +86,14 @@ export async function analyzeReceipt(base64Image: string, context: { categories:
     - Accounts: ${context.accounts.join(", ")}
     - Family Members: ${context.familyMembers.join(", ")}
     
-    Map values strictly to the provided context.
+    Map values strictly to the provided context. Return ONLY valid JSON.
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: {
-        parts: [
-          { text: systemInstruction },
-          { inlineData: { mimeType, data: base64Data } }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: receiptSchema,
-        temperature: 0,
-      }
-    });
-
-    const content = response.text;
-    if (!content) throw new Error("Gemini returned empty response");
-    return JSON.parse(content);
-  } catch (error: any) {
-    console.error("Gemini Analysis Error:", error);
-    
-    if (error.status === 503 || error.message?.includes("503") || error.message?.includes("high demand")) {
-      console.log("Gemini high demand, falling back to OCR + Groq...");
-      const ocrText = await performOCR(base64Image);
-      if (!ocrText) throw new Error("Fallback failed: OCR text extraction failed.");
-      return await fallbackWithGroq(ocrText, context);
-    }
-    
-    throw error;
-  }
-}
-
-export async function analyzeReceiptStream(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
-  const apiKey = getNextGeminiKey();
-  const ai = new GoogleGenAI({
-    apiKey,
-    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-  });
-
-  const base64Data = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
-  const mimeTypeMatch = base64Image.match(/^data:(image\/(png|jpeg|jpg|webp));base64,/);
-  const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
-
-  const systemInstruction = `
-    Analyze receipt. Return valid JSON only.
-    CONTEXT:
-    - Categories: ${context.categories.join(", ")}
-    - Accounts: ${context.accounts.join(", ")}
-    - Family Members: ${context.familyMembers.join(", ")}
-  `;
-
-  return await ai.models.generateContentStream({
+  console.log("Attempting Gemini Vision analysis (Level 1)...");
+  const result = await ai.models.generateContent({
     model: "gemini-flash-latest",
     contents: {
+      role: "user",
       parts: [
         { text: systemInstruction },
         { inlineData: { mimeType, data: base64Data } }
@@ -185,7 +101,48 @@ export async function analyzeReceiptStream(base64Image: string, context: { categ
     },
     config: {
       responseMimeType: "application/json",
+      responseSchema: receiptSchema,
       temperature: 0,
     }
   });
+
+  const content = result.text;
+  if (!content) throw new Error("Gemini returned empty response");
+  return JSON.parse(content);
+}
+
+export async function analyzeReceipt(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+  const TIMEOUT_MS = 35000; // 35 seconds total timeout
+  
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Proses analisa melebihi batas waktu (timeout). Silakan coba lagi.")), TIMEOUT_MS)
+  );
+
+  const analysisPromise = (async () => {
+    // Level 1: Gemini Vision
+    try {
+      const result = await analyzeWithGemini(base64Image, context);
+      console.log("Level 1 (Gemini) success.");
+      return result;
+    } catch (geminiError: any) {
+      console.warn("Level 1 (Gemini) failed, falling back to Level 2 (OCR + Groq)...", geminiError.message);
+      
+      // Level 2: OCR + Groq
+      const ocrText = await performOCR(base64Image);
+      if (!ocrText || ocrText.trim().length < 5) {
+        throw new Error("Gagal membaca teks dari gambar. Pastikan gambar jelas.");
+      }
+      
+      const result = await extractWithGroq(ocrText, context);
+      console.log("Level 2 (OCR + Groq) success.");
+      return result;
+    }
+  })();
+
+  try {
+    return await Promise.race([analysisPromise, timeoutPromise]);
+  } catch (error: any) {
+    console.error("AI Analysis Error:", error);
+    throw error;
+  }
 }
