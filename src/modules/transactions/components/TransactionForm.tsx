@@ -139,7 +139,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     setIsAnalyzing(true);
     setAnalyzeStatus('Analyzing data (AI)...');
     try {
-      const base64Image = selectedImage.split(',')[1];
+      const base64Image = selectedImage;
       
       const context = {
         categories: dynamicCategories.map(c => c.value),
