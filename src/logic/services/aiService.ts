@@ -1,25 +1,43 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
+import Groq from "groq-sdk";
+import { createWorker } from "tesseract.js";
 
 export async function analyzeReceipt(base64Image: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
   try {
-    console.log("Starting Gemini AI Receipt Analysis...");
+    console.log("Starting OCR process with Tesseract.js (CDN Mode)...");
+    
+    // Fix for Vercel: Use CDN assets for Tesseract worker and WASM to avoid ENOENT errors
+    const worker = await createWorker('ind+eng', 1, {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/worker.min.js',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core-simd.wasm.js',
+      logger: m => console.log(m)
+    });
 
-    const mimeTypeMatch = base64Image.match(/^data:([^;]+);base64,/);
-    const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg";
-    const base64Data = base64Image.replace(/^data:[^;]+;base64,/, '');
+    // Extract base64 data regardless of whether header is present
+    const base64Data = base64Image.includes('base64,') 
+      ? base64Image.split('base64,')[1] 
+      : base64Image;
+      
+    const buffer = Buffer.from(base64Data, 'base64');
 
+    const { data: { text } } = await worker.recognize(buffer);
+    await worker.terminate();
+
+    if (!text || text.trim().length < 5) {
+      throw new Error("Gagal membaca teks dari gambar. Pastikan gambar jelas.");
+    }
+
+    console.log("OCR successful. Extracting data with Groq (llama-3.3-70b)...");
+
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is not configured");
+    }
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    
     const systemPrompt = `
       You are an elite financial data extractor for "Maliya" - a Personal Finance OS.
-      Your task is to transform images of Indonesian receipts into structured JSON.
+      Your task is to transform messy OCR text from Indonesian receipts into structured JSON.
       
       CONTEXT (STRICT MAPPING):
       - Categories: ${context.categories.join(", ")}
@@ -38,55 +56,42 @@ export async function analyzeReceipt(base64Image: string, context: { categories:
          - category_name: Select the BEST match from the Categories list above.
          - account_name: Select the BEST match from the Accounts list above.
          - family_member_name: Select the BEST match from the Family Members list above.
+      
+      STRICT OUTPUT:
+      Return ONLY a valid JSON object. No preamble, no explanation.
+      
+      JSON STRUCTURE:
+      {
+        "date": "YYYY-MM-DD",
+        "amount": 0,
+        "title": "...",
+        "description": "...",
+        "type": "expense",
+        "category_name": "...",
+        "account_name": "...",
+        "family_member_name": "..."
+      }
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: [
-        {
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: base64Data
-              }
-            },
-            {
-              text: systemPrompt
-            }
-          ]
-        }
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `OCR TEXT TO ANALYZE:\n${text}` }
       ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            date: { type: Type.STRING, description: "YYYY-MM-DD" },
-            amount: { type: Type.NUMBER, description: "Total amount as number" },
-            title: { type: Type.STRING, description: "Merchant or transaction title" },
-            description: { type: Type.STRING, description: "Short summary of items" },
-            type: { type: Type.STRING, description: "'expense' or 'income'" },
-            category_name: { type: Type.STRING, description: "Best match from categories" },
-            account_name: { type: Type.STRING, description: "Best match from accounts" },
-            family_member_name: { type: Type.STRING, description: "Best match from family members" }
-          },
-          required: ["date", "amount", "title", "type"]
-        }
-      }
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.1,
+      response_format: { type: "json_object" }
     });
 
-    const resultText = response.text;
-    if (!resultText) {
-      throw new Error("Gemini returned empty response");
-    }
-
-    const result = JSON.parse(resultText);
-    console.log("Gemini Analysis successful.");
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error("Groq returned empty response");
+    
+    const result = JSON.parse(content);
+    console.log("Analysis successful.");
     return result;
 
   } catch (error: any) {
-    console.error("Gemini AI Analysis Error:", error);
+    console.error("AI Analysis Error (OCR + Groq):", error);
     throw error;
   }
 }
