@@ -114,7 +114,9 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
   const [selectedImage, setSelectedImage] = useState<string | null>(
     initialData?.attachments && initialData.attachments.length > 0 ? initialData.attachments[0] : null
   );
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showPhotoOptions, setShowPhotoOptions] = React.useState(false);
+  const fileInputGalleryRef = React.useRef<HTMLInputElement>(null);
+  const fileInputCameraRef = React.useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,11 +140,17 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     }
   };
 
+  const handleRemovePhoto = () => {
+    setSelectedImage(null);
+    if (fileInputGalleryRef.current) fileInputGalleryRef.current.value = '';
+    if (fileInputCameraRef.current) fileInputCameraRef.current.value = '';
+  };
+
   const handleAnalyzeAI = async (base64Image: string) => {
     if (!base64Image) return;
     
     setIsAnalyzing(true);
-    setAnalyzeStatus('Extracting text (OCR)...');
+    setAnalyzeStatus('Please Wait...');
     try {
       const worker = await createWorker('ind+eng');
       const { data: { text } } = await worker.recognize(base64Image);
@@ -152,7 +160,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
         throw new Error("Gagal membaca teks dari gambar. Pastikan gambar jelas.");
       }
 
-      setAnalyzeStatus('Analyzing text (AI)...');
+      setAnalyzeStatus('Please Wait...');
       
       const context = {
         categories: dynamicCategories.map(c => c.value),
@@ -453,15 +461,17 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
   return (
     <>
       {isAnalyzing && (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-          <Loader2 className="w-12 h-12 text-green-500 animate-spin mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900">{analyzeStatus}</h3>
-          <p className="text-sm text-gray-500 mt-2">Please wait while AI extracts data...</p>
-        </div>
+        <div className="fixed inset-0 z-[9999] bg-white/10 backdrop-blur-[1px] cursor-wait" />
       )}
       <div className="flex flex-col gap-6 w-full">
       {/* AI Receipt Upload Section */}
-      <div className={cn("p-4 border-2 border-dashed rounded-xl transition-all", selectedImage ? "border-green-500 bg-green-50" : "border-gray-200 hover:border-green-400")}>
+      <div className={cn("relative p-4 border-2 border-dashed rounded-xl transition-all overflow-hidden", selectedImage ? "border-green-500 bg-green-50" : "border-gray-200 hover:border-green-400")}>
+        {isAnalyzing && (
+          <div className="absolute inset-0 z-50 bg-white/80 flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 text-green-500 animate-spin mb-2" />
+            <p className="text-sm font-medium text-gray-700">{analyzeStatus}</p>
+          </div>
+        )}
         <div className="flex flex-col items-center gap-3">
           {selectedImage ? (
             <div className="relative w-full aspect-[16/9] max-h-48 overflow-hidden rounded-lg shadow-sm border border-green-200">
@@ -469,7 +479,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
               {!internalReadOnly && (
                 <button 
                   type="button"
-                  onClick={() => setSelectedImage(null)}
+                  onClick={handleRemovePhoto}
                   className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md"
                 >
                   <X size={14} />
@@ -480,31 +490,69 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
             <div className="flex flex-col items-center py-2">
               <Camera size={32} className="text-gray-400 mb-2" />
               <p className="text-sm text-gray-500 text-center font-medium">Receipt Photo for Autofill</p>
-              <p className="text-[10px] text-gray-400 text-center">AI Analysis (Powered by Gemini)</p>
             </div>
           )}
           
           {!internalReadOnly && (
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex gap-2 w-full">
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleImageChange} 
-                  accept="image/*" 
-                  capture="environment"
-                  className="hidden" 
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={cn("w-full py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-xs", 
-                    selectedImage ? "bg-white border border-green-200 text-green-700 hover:bg-green-100" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  )}
-                >
-                  {selectedImage ? 'Change Photo' : 'Select Photo'}
-                </button>
-              </div>
+            <div className="flex flex-col gap-2 w-full relative">
+              <input 
+                type="file" 
+                ref={fileInputCameraRef} 
+                onChange={handleImageChange} 
+                accept="image/*" 
+                capture="environment"
+                className="hidden" 
+              />
+              <input 
+                type="file" 
+                ref={fileInputGalleryRef} 
+                onChange={handleImageChange} 
+                accept="image/*" 
+                className="hidden" 
+              />
+              <button
+                type="button"
+                onClick={() => setShowPhotoOptions(!showPhotoOptions)}
+                className={cn("w-full py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-xs", 
+                  selectedImage ? "bg-white border border-green-200 text-green-700 hover:bg-green-100" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                )}
+              >
+                {selectedImage ? 'Change Photo' : 'Select Photo'}
+              </button>
+              
+              {showPhotoOptions && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowPhotoOptions(false)} />
+                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPhotoOptions(false);
+                        if (fileInputCameraRef.current) {
+                          fileInputCameraRef.current.value = '';
+                          fileInputCameraRef.current.click();
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 font-medium"
+                    >
+                      Take Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPhotoOptions(false);
+                        if (fileInputGalleryRef.current) {
+                          fileInputGalleryRef.current.value = '';
+                          fileInputGalleryRef.current.click();
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                      Choose from Gallery
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
