@@ -6,7 +6,6 @@ import { useFinance } from '../../../logic/context/FinanceContext';
 import { useAuth } from '../../../logic/context/AuthContext';
 import { useBudgets } from '../../../logic/hooks/useBudgets';
 import { ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Camera, Wand2, Loader2, X } from 'lucide-react';
-import { createWorker } from 'tesseract.js';
 import { AccountService } from '../../../logic/services/accountService';
 import { Wallet, CreditCard } from '../../../logic/types/accounts';
 import { format } from 'date-fns';
@@ -181,16 +180,6 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
     setIsAnalyzing(true);
     setAnalyzeStatus('Please Wait...');
     try {
-      const worker = await createWorker('ind+eng');
-      const { data: { text } } = await worker.recognize(base64Image);
-      await worker.terminate();
-
-      if (!text || text.trim().length < 5) {
-        throw new Error("Gagal membaca teks dari gambar. Pastikan gambar jelas.");
-      }
-
-      setAnalyzeStatus('Please Wait...');
-      
       const context = {
         categories: dynamicCategories.map(c => c.value),
         accounts: accountOptions.map(a => a.label.split(' (')[0]),
@@ -200,7 +189,7 @@ export default function TransactionForm({ initialData, fixedType, prefilledCateg
       const response = await fetch(`${window.location.origin}/api/ai/analyze-receipt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, context }),
+        body: JSON.stringify({ imageBase64: base64Image, context }),
       });
 
       if (!response.ok) {

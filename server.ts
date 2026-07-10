@@ -30,10 +30,10 @@ app.use(express.json({ limit: '50mb' }));
   // API Route: AI Receipt Analysis
   app.post("/api/ai/analyze-receipt", async (req, res) => {
     try {
-      const { text, context } = req.body;
-      if (!text) return res.status(400).json({ error: "Text is required" });
+      const { imageBase64, context } = req.body;
+      if (!imageBase64) return res.status(400).json({ error: "Image is required" });
       
-      const result = await analyzeReceipt(text, context);
+      const result = await analyzeReceipt(imageBase64, context);
       res.json(result);
     } catch (error: any) {
       console.error("AI Analysis Error:", error);

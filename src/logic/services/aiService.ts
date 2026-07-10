@@ -1,22 +1,31 @@
-import Groq from "groq-sdk";
+import { GoogleGenAI } from "@google/genai";
 
-export async function analyzeReceipt(text: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
+export async function analyzeReceipt(imageBase64: string, context: { categories: string[], accounts: string[], familyMembers: string[] }) {
   try {
-    if (!text || text.trim().length < 5) {
-      throw new Error("Gagal membaca teks dari gambar. Pastikan gambar jelas.");
+    if (!imageBase64) {
+      throw new Error("Gagal membaca gambar. Pastikan gambar jelas.");
     }
 
-    console.log("OCR successful. Extracting data with Groq (llama-3.3-70b)...");
+    console.log("Analyzing image directly with Gemini Flash...");
 
-    if (!process.env.GROQ_API_KEY) {
-      throw new Error("GROQ_API_KEY is not configured");
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    
+    // Determine mimeType from base64 string
+    const match = imageBase64.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    let mimeType = 'image/jpeg';
+    let base64Data = imageBase64;
+    if (match) {
+      mimeType = match[1];
+      base64Data = match[2];
+    }
     
     const systemPrompt = `
       You are an elite financial data extractor for "Maliya" - a Personal Finance OS.
-      Your task is to transform messy OCR text from Indonesian receipts into structured JSON.
+      Your task is to analyze the provided receipt image and extract structured JSON data.
       
       CONTEXT (STRICT MAPPING):
       - Categories: ${context.categories.join(", ")}
@@ -38,39 +47,49 @@ export async function analyzeReceipt(text: string, context: { categories: string
       
       STRICT OUTPUT:
       Return ONLY a valid JSON object. No preamble, no explanation.
-      
-      JSON STRUCTURE:
-      {
-        "date": "YYYY-MM-DD",
-        "amount": 0,
-        "title": "...",
-        "description": "...",
-        "type": "expense",
-        "category_name": "...",
-        "account_name": "...",
-        "family_member_name": "..."
-      }
     `;
+    
+    const schema = {
+      type: "OBJECT",
+      properties: {
+        date: { type: "STRING", description: "YYYY-MM-DD format" },
+        amount: { type: "NUMBER", description: "Total amount" },
+        title: { type: "STRING", description: "Merchant name or transaction title" },
+        description: { type: "STRING", description: "Summary of items purchased" },
+        type: { type: "STRING", description: "expense or income" },
+        category_name: { type: "STRING" },
+        account_name: { type: "STRING" },
+        family_member_name: { type: "STRING" }
+      }
+    };
 
-    const completion = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `OCR TEXT TO ANALYZE:\n${text}` }
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        systemPrompt,
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType
+          }
+        }
       ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.1,
-      response_format: { type: "json_object" }
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+        temperature: 0.1,
+      }
     });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) throw new Error("Groq returned empty response");
+    const content = response.text;
+    if (!content) throw new Error("Gemini returned empty response");
     
     const result = JSON.parse(content);
     console.log("Analysis successful.");
     return result;
 
   } catch (error: any) {
-    console.error("AI Analysis Error (Groq):", error);
+    console.error("AI Analysis Error (Gemini):", error);
     throw error;
   }
 }
